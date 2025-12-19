@@ -9,7 +9,8 @@
             ],
             "defines": [],
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-x64",
+            "cStandard": "c11"
         }
     ],
     "version": 4

@@ -1,11 +1,13 @@
 #include <libdragon.h>
 #include <t3d/t3d.h>
 #include <t3d/t3dmodel.h>
+#include <stdlib.h>
+#include "overlays/actor2d.h"
 
 #define FB_COUNT 3
 
 #define ACTOR_COUNT 250
-#define MAX_FISH_NO 255
+#define MAX_FISH_NO 40
 
 #define RAD_360 6.28318530718f
 
@@ -23,8 +25,89 @@ static char* state_strs[] = { "FISH", "AQUA", "SHOP", "SHELF"};
 
 static volatile bool can_switch = false;
 
+// SPRITE OVERLAY SHIT
 
+#define MAX_SPRITES 1
+#define MAX_SPRITE_TYPES 1
 
+typedef struct actor2d_info_s {
+	const char *name;
+	const char *sprite_path;
+	const char *ovl_path;
+} actor2d_info_t;
+
+static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
+	{"pointer", "rom:/pointer.ci4.sprite", "rom:/pointer.dso" }
+};
+
+static actor2d_t *spriteActors[MAX_SPRITES];
+
+static int find_free_sprite_actor() {
+
+	for(int i=0; i<MAX_SPRITES; i++) {
+		if(!spriteActors[i]) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+static void create_sprite_actor(int type, float x, float y) {
+	if(type < MAX_SPRITE_TYPES) {
+		void *ovl_handle;
+		actor2d_class_t *class;
+
+		int slot = find_free_sprite_actor();
+		if(slot==-1) {
+			return;
+		}
+
+		ovl_handle = dlopen(actor2d_info[type].ovl_path, RTLD_LOCAL);
+		class = dlsym(ovl_handle, "sprite_actor_class");
+		assertf(class, "Failed to find actor class for %s", actor2d_info[type].name);
+		spriteActors[slot] = calloc(1, class->instance_size);
+
+		spriteActors[slot]->ovl_handle = ovl_handle;
+		spriteActors[slot]->update = class->update;
+		spriteActors[slot]->sprite = sprite_load(actor2d_info[type].sprite_path);
+		spriteActors[slot]->x = x;
+		spriteActors[slot]->y = y;
+		spriteActors[slot]->x_scale = spriteActors[slot]->y_scale = 1.0f;
+		spriteActors[slot]->visible = true;
+		class->init(spriteActors[slot]);
+	}
+}
+
+static void draw_sprite_actors() {
+	rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+	for(int i=0; i<MAX_SPRITES; i++) {
+		if(spriteActors[i] && spriteActors[i]->visible) {
+			surface_t surf = sprite_get_pixels(spriteActors[i]->sprite);
+			rdpq_tex_blit(&surf, spriteActors[i]->x,spriteActors[i]->y, &(rdpq_blitparms_t){
+				.cx = surf.width/2, .cy = surf.height/2,
+				.scale_x = spriteActors[i]->x_scale, .scale_y = spriteActors[i]->y_scale,
+				.theta = spriteActors[i]->angle
+			});
+		}
+	}
+
+}
+
+static void update_sprite_actors(joypad_inputs_t pad) {
+	for(int i=0; i<MAX_SPRITES; i++) {
+		if(spriteActors[i]) {
+			if(!spriteActors[i]->update(spriteActors[i], pad)) {
+				dlclose(spriteActors[i]->ovl_handle);
+				sprite_free(spriteActors[i]->sprite);
+				free(spriteActors[i]);
+				spriteActors[i] = NULL;
+			}
+		}
+	}
+}
+
+// generic 3d actor?
 typedef struct {
 	uint32_t id;
 	float pos[3];
@@ -141,6 +224,8 @@ int main() {
 	rdpq_init();
 	joypad_init();
 
+	//joypad_inputs_t padInputs;
+
 	t3d_init((T3DInitParams){});
 	T3DViewport viewport = t3d_viewport_create_buffered(FB_COUNT);
 	rdpq_text_register_font(FONT_BUILTIN_DEBUG_MONO, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_MONO));
@@ -162,9 +247,9 @@ int main() {
 	Actor actors[ACTOR_COUNT];
 
 
-	for(int j=0; j<ACTOR_COUNT; ++j) {
-		actors[j] = actor_create(j, dpls[j*3 % 2]);
-	}
+	// for(int j=0; j<ACTOR_COUNT; ++j) {
+	// 	actors[j] = actor_create(j, dpls[j*3 % 2]);
+	// }
 
 	Actor fish_storage[MAX_FISH_NO];
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
@@ -177,23 +262,36 @@ int main() {
 	uint8_t lightDirColor[4] = {120,120,120, 0xFF};
 	t3d_vec3_norm(&lightDirVec);
 
-	int actorCount = 50;
+	int actorCount = 0;
 
 	int fishCount = 1;
 
+	timer_init();
+
 	timer_link_t *switch_delay;
 
-	timer_init();
+	
 
 	switch_delay = new_timer(TIMER_TICKS(1000000), TF_ONE_SHOT, on_switch_end);
 
 	//state_init();
+
+	// init actors?
+
+	// ====== 2d sprite based actors ======
+	create_sprite_actor(0, display_get_width()/2, display_get_height()/2);
 
 
 	for(;;) {
 		// ======== UPDATE LOOP ========
 		joypad_poll();
 		joypad_inputs_t joypad = joypad_get_inputs(JOYPAD_PORT_1);
+
+		//joypad_8way_t analog = joypad_get_direction(JOYPAD_PORT_1, JOYPAD_2D_STICK);
+
+		//joypad.stick_x;
+
+		update_sprite_actors(joypad);
 
 		frameIdx = (frameIdx + 1) % FB_COUNT;
 
@@ -206,9 +304,9 @@ int main() {
 		objTime += deltaTime;
 
 		float timeUpdate = get_time_ms();
-		for(int i=0; i<ACTOR_COUNT; ++i) {
-			actor_update(&actors[i]);
-		}
+		// for(int i=0; i<ACTOR_COUNT; ++i) {
+		// 	actor_update(&actors[i]);
+		// }
 		timeUpdate = get_time_ms() - timeUpdate;
 
 		//t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.0f), 10.0f, 100.0f);
@@ -249,6 +347,11 @@ int main() {
 			totalTris += triCount[(i*3) % 2];
 		}
 
+		// um draw pointer
+		rdpq_set_mode_standard();
+		draw_sprite_actors();
+
+		// TEXT STUFF DEBUG
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 210, "	   [C] Actors: %d", actorCount);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 220, "[STICK] Speed : %.2f", baseSpeed);
 
@@ -257,6 +360,7 @@ int main() {
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 220, "FPS      : %.2f", display_get_fps());
 
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 16, "State    : %s", state_strs[gstate]);
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 16, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
 
 		rdpq_detach_show();
 	}
