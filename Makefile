@@ -1,12 +1,14 @@
 BUILD_DIR=build
 #T3D_INST=$(shell realpath ../..)
 
+ARES_PATH=/mnt/c/Users/Archevia/Documents/ゲームソフト/ares-v146/ares.exe
+
 include $(N64_INST)/include/n64.mk
 include $(N64_INST)/include/t3d.mk #$(T3D_INST)/t3d.mk
 
 N64_CFLAGS += -std=gnu2x
 
-PROJECT_NAME=fishwizard
+PROJECT_NAME=fish
 
 src = $(wildcard src/*.c) #main.c
 #ovl = $(wildcard src/overlays/*.c)
@@ -63,7 +65,8 @@ $(PROJECT_NAME).z64: $(BUILD_DIR)/$(PROJECT_NAME).dfs $(MAIN_ELF_SYMBOLS)
 
 $(MAIN_ELF_SYMBOLS): $(BUILD_DIR)/$(PROJECT_NAME).elf
 
-
+# run:
+# 	$(ARES_PATH) $(PROJECT_NAME).z64
 
 clean:
 	rm -rf $(BUILD_DIR) *.z64

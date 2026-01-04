@@ -2,6 +2,7 @@
 #include <t3d/t3d.h>
 #include <t3d/t3dmodel.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "overlays/actor2d.h"
 
 #define FB_COUNT 3
@@ -23,7 +24,7 @@ static GameState_t gstate = 1;
 
 static char* state_strs[] = { "FISH", "AQUA", "SHOP", "SHELF"};
 
-static volatile bool can_switch = false;
+static bool can_switch_gs = false;
 
 // SPRITE OVERLAY SHIT
 
@@ -38,6 +39,7 @@ typedef struct actor2d_info_s {
 
 static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
 	{"pointer", "rom:/pointer.ci4.sprite", "rom:/pointer.dso" }
+	// instance for coins?
 };
 
 static actor2d_t *spriteActors[MAX_SPRITES];
@@ -83,12 +85,20 @@ static void draw_sprite_actors() {
 	rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
 	for(int i=0; i<MAX_SPRITES; i++) {
 		if(spriteActors[i] && spriteActors[i]->visible) {
-			surface_t surf = sprite_get_pixels(spriteActors[i]->sprite);
-			rdpq_tex_blit(&surf, spriteActors[i]->x,spriteActors[i]->y, &(rdpq_blitparms_t){
-				.cx = surf.width/2, .cy = surf.height/2,
-				.scale_x = spriteActors[i]->x_scale, .scale_y = spriteActors[i]->y_scale,
-				.theta = spriteActors[i]->angle
-			});
+			//surface_t surf = sprite_get_pixels(spriteActors[i]->sprite);
+			// rdpq_tex_blit(&surf, spriteActors[i]->x,spriteActors[i]->y, &(rdpq_blitparms_t){
+			// 	.cx = surf.width/2, .cy = surf.height/2,
+			// 	.scale_x = spriteActors[i]->x_scale, .scale_y = spriteActors[i]->y_scale,
+			// 	.theta = spriteActors[i]->angle
+			// });
+
+			rdpq_sprite_blit(spriteActors[i]->sprite, spriteActors[i]->x,spriteActors[i]->y, NULL); //&(rdpq_blitparms_t){
+			// 	.cx = surf.width/2, .cy = surf.height/2,
+			// 	.scale_x = spriteActors[i]->x_scale, .scale_y = spriteActors[i]->y_scale,
+			// 	.theta = spriteActors[i]->angle
+			// });
+
+			//rdp_draw_textured_rectangle(0);
 		}
 	}
 
@@ -119,12 +129,17 @@ typedef struct {
 } Actor;
 
 Actor actor_create(uint32_t id, rspq_block_t *dpl) {
-	float randScale = (rand() % 100) / 3000.0f + 0.03f;
+	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
+	float posx = 0, posy = 0, posz = 0;
+	if(id == 1){
+		posz=-10.f;
+	}
+
 	Actor actor = (Actor){
 		.id = id,
-		.pos = {0,0,0},
+		.pos = {posx,posy,posz},
 		.rot = {0,0,0},
-		.scale = {randScale, randScale, randScale},
+		.scale = {1, 1, 1},
 		.dpl = dpl,
 		.modelMat = malloc_uncached(sizeof(T3DMat4FP) * FB_COUNT)
 	};
@@ -132,21 +147,24 @@ Actor actor_create(uint32_t id, rspq_block_t *dpl) {
 }
 
 void actor_update(Actor *actor) {
-	actor->pos[0] = 0;
+	// actor->pos[0] = 0;
+	// actor->pos[1] = 0;
+	// actor->pos[2] = 0;
 
-	float randRot = (float)fm_fmodf(actor->id * 123.1f, 5.0f);
-	float randDist = (float)fm_fmodf(actor->id * 4645.987f, 30.5f) + 10.0f;
+	// float randRot = (float)fm_fmodf(actor->id * 123.1f, 5.0f);
+	// float randDist = (float)fm_fmodf(actor->id * 4645.987f, 30.5f) + 10.0f;
 
-	actor->rot[0] = fm_fmodf(randRot + objTime * 1.05f, RAD_360);
-	actor->rot[1] = fm_fmodf(randRot + objTime * 1.03f, RAD_360);
-	actor->rot[2] = fm_fmodf(randRot + objTime * 1.2f, RAD_360);
+	// actor->rot[0] = fm_fmodf(randRot + objTime * 1.05f, RAD_360);
+	// actor->rot[1] = fm_fmodf(randRot + objTime * 1.03f, RAD_360);
+	// actor->rot[2] = fm_fmodf(randRot + objTime * 1.2f, RAD_360);
 
-	actor->pos[0] = randDist * fm_cosf(objTime * 1.6f + randDist);
-	actor->pos[1] = randDist * fm_cosf(objTime * 1.5f + randRot);
-	actor->pos[2] = randDist * fm_cosf(objTime * 1.4f + randDist*randRot);
+	// actor->pos[0] = randDist * fm_cosf(objTime * 1.6f + randDist);
+	// actor->pos[1] = randDist * fm_cosf(objTime * 1.5f + randRot);
+	// actor->pos[2] = randDist * fm_cosf(objTime * 1.4f + randDist*randRot);
 
 
 	t3d_mat4fp_from_srt_euler(&actor->modelMat[frameIdx], actor->scale, actor->rot, actor->pos);
+	//return;
 }
 
 void actor_draw(Actor *actor) {
@@ -175,20 +193,35 @@ void state_init() {
 	}
 }
 
-void state_update(float delta) {
+void state_update(float delta, T3DVec3 *dir) {
 	switch(gstate) {
 		case 0:
 			//FISH
+			dir->v[0] = 0;
+			dir->v[1] = 0;
+			dir->v[2] = 1;
 			break;
 		case 1:
 			//AQUA
+			dir->v[0] = -1;
+			dir->v[1] = 0;
+			dir->v[2] = 0;
 			break;
 		case 2:
 			//SHOP
+			
+			dir->v[0] = 0;
+			dir->v[1] = 0;
+			dir->v[2] = -1;
 			break;
 		case 3:
 			//SHELF
+			dir->v[0] = 1;
+			dir->v[1] = 0;
+			dir->v[2] = 0;
 	}
+
+	//return dir;
 }
 
 void state_switch(GameState_t new_state) {
@@ -196,14 +229,24 @@ void state_switch(GameState_t new_state) {
 }
 
 void on_switch_end(int ovfl) {
-	can_switch = true;
+	can_switch_gs = true;
 
-	gstate += 1;
+	if(gstate < 3) {
+		gstate += 1;
+	} else {
+		gstate = 0;
+	}
+
+	
 	// console_clear();
 
 	// printf("timer ended");
 
 	// console_render();
+}
+
+void timer_func() {
+	
 }
 
 
@@ -217,6 +260,11 @@ int main() {
 		debug_init_usblog();
 		asset_init_compression(2);
 
+	//audio init!
+	// audio_init(44100, 4);
+	// mixer_init(32);
+
+
 	dfs_init(DFS_DEFAULT_LOCATION);
 
 	display_init(RESOLUTION_320x240, DEPTH_16_BPP, FB_COUNT, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
@@ -224,45 +272,62 @@ int main() {
 	rdpq_init();
 	joypad_init();
 
+	
+
+
+
 	//joypad_inputs_t padInputs;
 
 	t3d_init((T3DInitParams){});
+
 	T3DViewport viewport = t3d_viewport_create_buffered(FB_COUNT);
 	rdpq_text_register_font(FONT_BUILTIN_DEBUG_MONO, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_MONO));
 
-	rspq_block_t *dpls[1];
-	T3DModel *models[1] = {
+	rspq_block_t *dpls[2];
+	T3DModel *models[2] = {
 		//load models here
+		t3d_model_load("rom:/rump.t3dm"), // INDEX 0 is gonna be the room, dont make actor from it? unknown
 		t3d_model_load("rom:/cube0.t3dm")
 	};
 
+	//int models_size = sizeof(models)/sizeof(T3DModel);
+
 	const int triCount[2] = {12,60};
 
-	//for(int i=0;i<2; ++i) {
+	for(int i=0;i<2; ++i) {
 		rspq_block_begin();
-		t3d_model_draw(models[0]);
-		dpls[0] = rspq_block_end();
-	//}
+		t3d_model_draw(models[i]);
+		dpls[i] = rspq_block_end();
+	}
 
 	Actor actors[ACTOR_COUNT];
 
 
-	// for(int j=0; j<ACTOR_COUNT; ++j) {
-	// 	actors[j] = actor_create(j, dpls[j*3 % 2]);
-	// }
+	for(int j=0; j<ACTOR_COUNT; ++j) {
+		
+		actors[j] = actor_create(j, dpls[j*3 % 2]);
+		// if(j==1) {
+		// 	actors[j].pos[2] = -10.0f;
+		// }
+	}
 
 	Actor fish_storage[MAX_FISH_NO];
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
 
-	const T3DVec3 camPos = {{100.0f, 25.0f, 0}};
-	const T3DVec3 camTarget = {{0,0,0}};
+	const T3DVec3 camPos = {{0.0f, 10.0f, 0.f}};
+	T3DVec3 camTarget = {{0,0,0}};
+	T3DVec3 camDir = {{0,0,1}};
+	
+
+
+	
 
 	uint8_t colorAmbient[4] = {80,50,50, 0xFF};
 	T3DVec3 lightDirVec = {{1.0f, 1.0f, 0.0f}};
 	uint8_t lightDirColor[4] = {120,120,120, 0xFF};
 	t3d_vec3_norm(&lightDirVec);
 
-	int actorCount = 0;
+	int actorCount = 2;
 
 	int fishCount = 1;
 
@@ -270,9 +335,8 @@ int main() {
 
 	timer_link_t *switch_delay;
 
-	
 
-	switch_delay = new_timer(TIMER_TICKS(1000000), TF_ONE_SHOT, on_switch_end);
+	switch_delay = new_timer(TIMER_TICKS(4000000), TF_CONTINUOUS, on_switch_end);
 
 	//state_init();
 
@@ -291,7 +355,7 @@ int main() {
 
 		//joypad.stick_x;
 
-		update_sprite_actors(joypad);
+		
 
 		frameIdx = (frameIdx + 1) % FB_COUNT;
 
@@ -304,36 +368,46 @@ int main() {
 		objTime += deltaTime;
 
 		float timeUpdate = get_time_ms();
-		// for(int i=0; i<ACTOR_COUNT; ++i) {
-		// 	actor_update(&actors[i]);
-		// }
-		timeUpdate = get_time_ms() - timeUpdate;
 
-		//t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.0f), 10.0f, 100.0f);
-		t3d_viewport_set_ortho(&viewport, -320/2, 320/2, 240/2, -240/2, 10.0f, 1000.0f);
-		t3d_viewport_look_at(&viewport, &camPos, &camTarget, &(T3DVec3){{0,1,0}});
-
-
+		for(int i=0; i<ACTOR_COUNT; ++i) {
+			actor_update(&actors[i]);
+		}
+		update_sprite_actors(joypad);
 		// Gamestate check?
 
-		state_update(deltaTime);
+		state_update(deltaTime, &camDir);
+
+		camTarget.v[0] = camPos.v[0] + camDir.v[0];
+		camTarget.v[1] = camPos.v[1] + camDir.v[1];
+		camTarget.v[2] = camPos.v[2] + camDir.v[2];
+
+		timeUpdate = get_time_ms() - timeUpdate;
+
+		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.0f), 1.0f, 1000.0f);
+		//t3d_viewport_set_ortho(&viewport, -320, 320, 240, -240, 1.0f, 100.0f);
+		t3d_viewport_look_at(&viewport, &camPos, &camTarget, &(T3DVec3){{0,1,0}});
 
 
 		// ======== DRAW 3D ========
 		rdpq_attach(display_get(), display_get_zbuf());
+
 		t3d_frame_start();
 		t3d_viewport_attach(&viewport);
+		//rdpq_mode_zbuf();
 
-		rdpq_set_prim_color(RGBA32(0, 0, 0, 0xFF));
+		rdpq_set_prim_color(RGBA32(0xFF, 0xFF, 0xFF, 0xFF));
 
-		t3d_screen_clear_color(RGBA32(100,120,200,0xFF));
+		t3d_screen_clear_color(RGBA32(100,120,220,0xFF));
 		t3d_screen_clear_depth();
 
 		t3d_light_set_ambient(colorAmbient);
 		t3d_light_set_directional(0, lightDirColor, &lightDirVec);
 		t3d_light_set_count(1);
 
+		//t3d_vert
+
 		t3d_matrix_push_pos(1);
+		//rspq_block_run(dpls[0]); // Draw Room?
 		for(int i=0; i<actorCount; ++i) {
 			actor_draw(&actors[i]);
 		}
@@ -348,12 +422,23 @@ int main() {
 		}
 
 		// um draw pointer
+
+		//rdp_detach_display();
+
 		rdpq_set_mode_standard();
+
 		draw_sprite_actors();
+
+		
+		//rdpq_set_mode_copy(false);
+		//rdpq_mode_combiner(RDPQ_COMBINER_TEX);
+		//rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+		//rspq_wait();
+		
 
 		// TEXT STUFF DEBUG
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 210, "	   [C] Actors: %d", actorCount);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 220, "[STICK] Speed : %.2f", baseSpeed);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 220, "[STICK] Speed : %.2f", baseSpeed);
 
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 200, "Triangles: %d", totalTris);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 210, "Update   : %.2fms", timeUpdate);
@@ -362,6 +447,8 @@ int main() {
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 16, "State    : %s", state_strs[gstate]);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 16, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
 
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 40, "room : %.2f, %.2f, %.2f", actors[0].pos[0], actors[0].pos[1], actors[0].pos[2]);
+
 		rdpq_detach_show();
 	}
 
@@ -369,6 +456,6 @@ int main() {
 	timer_close();
 
 	
-
+	t3d_destroy();
 	//while(1) ;
 }
