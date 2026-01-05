@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "overlays/actor2d.h"
+#include "util.h"
 
 #define FB_COUNT 3
 
@@ -38,7 +39,7 @@ typedef struct actor2d_info_s {
 } actor2d_info_t;
 
 static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
-	{"pointer", "rom:/pointer.ci4.sprite", "rom:/pointer.dso" }
+	{"hpointer", "rom:/hand.ci8.sprite", "rom:/pointer.dso" }
 	// instance for coins?
 };
 
@@ -117,6 +118,8 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 	}
 }
 
+
+
 // generic 3d actor?
 typedef struct {
 	uint32_t id;
@@ -193,34 +196,68 @@ void state_init() {
 	}
 }
 
+static float angle = 0.f;
+
 void state_update(float delta, T3DVec3 *dir) {
+
+	//angle = lerp_angle(angle, (float)gstate * (RAD_360/4.0f) + (RAD_360/4.0f), delta);
+
+	//float vt0 = 0.f, vt1 = 0.f, vt2 = 0.f;
+
+	T3DVec3 tDir = {{0, 0, 0}};
+	
 	switch(gstate) {
 		case 0:
 			//FISH
-			dir->v[0] = 0;
-			dir->v[1] = 0;
-			dir->v[2] = 1;
+
+			tDir.v[0] = 0;
+			tDir.v[1] = 0;
+			tDir.v[2] = 1;
+			// dir->v[0] = 0;
+			// dir->v[1] = 0;
+			// dir->v[2] = 1;
 			break;
 		case 1:
 			//AQUA
-			dir->v[0] = -1;
-			dir->v[1] = 0;
-			dir->v[2] = 0;
+
+
+			tDir.v[0] = -1;
+			tDir.v[1] = 0;
+			tDir.v[2] = 0;
+			// dir->v[0] = -1;
+			// dir->v[1] = 0;
+			// dir->v[2] = 0;
 			break;
 		case 2:
 			//SHOP
 			
-			dir->v[0] = 0;
-			dir->v[1] = 0;
-			dir->v[2] = -1;
+			tDir.v[0] = 0;
+			tDir.v[1] = 0;
+			tDir.v[2] = -1;
+			// dir->v[0] = 0;
+			// dir->v[1] = 0;
+			// dir->v[2] = -1;
 			break;
 		case 3:
 			//SHELF
-			dir->v[0] = 1;
-			dir->v[1] = 0;
-			dir->v[2] = 0;
+			tDir.v[0] = 1;
+			tDir.v[1] = 0;
+			tDir.v[2] = 0;
+			// dir->v[0] = 1;
+			// dir->v[1] = 0;
+			// dir->v[2] = 0;
 	}
 
+	t3d_vec3_lerp(dir, dir, &tDir, delta*2);
+
+	// dir->v[0] = lerp_angle(dir->v[0], vt0, delta);
+	// dir->v[1] = lerp_angle(dir->v[1], vt1, delta);
+	// dir->v[2] = lerp_angle(dir->v[2], vt2, delta);
+
+
+	//conso
+	//printf("ANGLE : %.4f", angle);
+	//rdpq_text_printn(NULL, FONT_BUILTIN_DEBUG_MONO, 220*2, 20*2, "Angle  : %.4f", angle);
 	//return dir;
 }
 
@@ -267,7 +304,7 @@ int main() {
 
 	dfs_init(DFS_DEFAULT_LOCATION);
 
-	display_init(RESOLUTION_320x240, DEPTH_16_BPP, FB_COUNT, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
+	display_init(RESOLUTION_640x480, DEPTH_16_BPP, FB_COUNT, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
 
 	rdpq_init();
 	joypad_init();
@@ -437,15 +474,17 @@ int main() {
 		
 
 		// TEXT STUFF DEBUG
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 210, "	   [C] Actors: %d", actorCount);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 210*2, "	   [C] Actors: %d", actorCount);
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 220, "[STICK] Speed : %.2f", baseSpeed);
 
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 200, "Triangles: %d", totalTris);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 210, "Update   : %.2fms", timeUpdate);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 220, "FPS      : %.2f", display_get_fps());
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 200*2, "Triangles: %d", totalTris);
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 210*2, "Update   : %.2fms", timeUpdate);
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 220*2, "FPS      : %.2f", display_get_fps());
 
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 16, "State    : %s", state_strs[gstate]);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 16, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 16*2, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
+
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 60*2, "Angle  : %.2f", angle);
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 40, "room : %.2f, %.2f, %.2f", actors[0].pos[0], actors[0].pos[1], actors[0].pos[2]);
 
