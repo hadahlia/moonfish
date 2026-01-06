@@ -263,21 +263,8 @@ void state_update(float delta, T3DVec3 *dir) {
 	//return dir;
 }
 
-void state_switch(GameState_t new_state) {
-	//if can switch:
-	gstate = new_state;
-
-	//can switch false, start timer makes true
-}
-
 void on_switch_end(int ovfl) {
 	can_switch_gs = true;
-
-	if(gstate < 3) {
-		gstate += 1;
-	} else {
-		gstate = 0;
-	}
 
 	
 	// console_clear();
@@ -287,8 +274,39 @@ void on_switch_end(int ovfl) {
 	// console_render();
 }
 
-void timer_func() {
+// void timer_func() {
 	
+// }
+
+void state_switch(int16_t new_state, timer_link_t *sd) {
+	//if can switch:
+	if(can_switch_gs == false) return;
+
+
+	// if(new_state > 3) {
+	// 	gstate = 0;
+	// 	return;
+	// } 
+	
+	// if (new_state < 0) {
+	// 	gstate = 3;
+	// 	return;
+	// }
+
+	
+
+	if (new_state < 0) {
+		gstate = SHELF;
+	} else if(new_state > 3) {
+		gstate = FISH;
+	} else {
+		gstate = new_state;
+	}
+	
+	can_switch_gs = false;
+	sd = new_timer(TIMER_TICKS(450000), TF_ONE_SHOT, on_switch_end);
+	
+	//can switch false, start timer makes true
 }
 
 
@@ -376,9 +394,7 @@ int main() {
 	timer_init();
 
 	timer_link_t *switch_delay;
-
-
-	switch_delay = new_timer(TIMER_TICKS(4000000), TF_CONTINUOUS, on_switch_end);
+	
 
 	//state_init();
 
@@ -387,7 +403,7 @@ int main() {
 	// ====== 2d sprite based actors ======
 	create_sprite_actor(0, display_get_width()/2, display_get_height()/2);
 
-
+	can_switch_gs = true;
 	for(;;) {
 		//! ======== UPDATE LOOP ========
 		joypad_poll();
@@ -396,6 +412,16 @@ int main() {
 		//joypad_8way_t analog = joypad_get_direction(JOYPAD_PORT_1, JOYPAD_2D_STICK);
 
 		//joypad.stick_x;
+
+		int16_t gs = (int16_t)gstate;
+
+		if(joypad.btn.l) {
+			state_switch(gs-1, switch_delay);
+		} 
+		
+		if(joypad.btn.r) {
+			state_switch(gs+1, switch_delay);
+		}
 
 		
 
