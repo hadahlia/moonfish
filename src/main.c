@@ -146,6 +146,7 @@ Actor actor_create(uint32_t id, rspq_block_t *dpl) {
 		.dpl = dpl,
 		.modelMat = malloc_uncached(sizeof(T3DMat4FP) * FB_COUNT)
 	};
+
 	return actor;
 }
 
@@ -167,6 +168,7 @@ void actor_update(Actor *actor) {
 
 
 	t3d_mat4fp_from_srt_euler(&actor->modelMat[frameIdx], actor->scale, actor->rot, actor->pos);
+
 	//return;
 }
 
@@ -262,7 +264,10 @@ void state_update(float delta, T3DVec3 *dir) {
 }
 
 void state_switch(GameState_t new_state) {
+	//if can switch:
 	gstate = new_state;
+
+	//can switch false, start timer makes true
 }
 
 void on_switch_end(int ovfl) {
@@ -384,7 +389,7 @@ int main() {
 
 
 	for(;;) {
-		// ======== UPDATE LOOP ========
+		//! ======== UPDATE LOOP ========
 		joypad_poll();
 		joypad_inputs_t joypad = joypad_get_inputs(JOYPAD_PORT_1);
 
@@ -411,7 +416,7 @@ int main() {
 		}
 		update_sprite_actors(joypad);
 		// Gamestate check?
-
+		
 		state_update(deltaTime, &camDir);
 
 		camTarget.v[0] = camPos.v[0] + camDir.v[0];
@@ -424,8 +429,9 @@ int main() {
 		//t3d_viewport_set_ortho(&viewport, -320, 320, 240, -240, 1.0f, 100.0f);
 		t3d_viewport_look_at(&viewport, &camPos, &camTarget, &(T3DVec3){{0,1,0}});
 
+		
+		//! ======== DRAW 3D ========
 
-		// ======== DRAW 3D ========
 		rdpq_attach(display_get(), display_get_zbuf());
 
 		t3d_frame_start();
