@@ -3,22 +3,25 @@
 #include <t3d/t3dmodel.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "actor.h"
+#include "fish.h"
 #include "overlays/actor2d.h"
-#include "util.h"
+//#include "util.h"
 
-#define FB_COUNT 3
+#define MODEL_TYPE 2
+#define ACTOR_COUNT 5
+//#define MAX_FISH_NO 40
 
-#define ACTOR_COUNT 250
-#define MAX_FISH_NO 40
-
-#define RAD_360 6.28318530718f
+//#define TAU 6.28318530718f
 
 static float objTimeLast = 0.f;
 static float objTime = 0.f;
 static float baseSpeed = 1.0f;
-static int frameIdx = 0;
+//frameIdx = 0;
 
 typedef enum {FISH = 0, AQUA = 1, SHOP = 2, SHELF = 3} GameState_t;
+
+//typedef enum MenuState {OFF = 0, MAIN = 1, GAME = 2}; //todo idea
 
 //static enum GameState {FISH = 0, AQUA = 1, SHOP = 2, SHELF = 3} gstate = 1;
 static GameState_t gstate = 1;
@@ -29,8 +32,8 @@ static bool can_switch_gs = false;
 
 // SPRITE OVERLAY SHIT
 
-#define MAX_SPRITES 1
-#define MAX_SPRITE_TYPES 1
+#define MAX_SPRITES 99
+#define MAX_SPRITE_TYPES 2
 
 typedef struct actor2d_info_s {
 	const char *name;
@@ -39,7 +42,8 @@ typedef struct actor2d_info_s {
 } actor2d_info_t;
 
 static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
-	{"hpointer", "rom:/hand.ci8.sprite", "rom:/pointer.dso" }
+	{"hpointer", "rom:/hand.ci8.sprite", "rom:/pointer.dso" },		// 0: hand pointer
+	{"menu", "rom:/dark.ci8.sprite", "rom:/menu.dso" }			   // 1: main menu
 	// instance for coins?
 };
 
@@ -78,6 +82,7 @@ static void create_sprite_actor(int type, float x, float y) {
 		spriteActors[slot]->y = y;
 		spriteActors[slot]->x_scale = spriteActors[slot]->y_scale = 1.0f;
 		spriteActors[slot]->visible = true;
+
 		class->init(spriteActors[slot]);
 	}
 }
@@ -121,65 +126,15 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 
 
 // generic 3d actor?
-typedef struct {
-	uint32_t id;
-	float pos[3];
-	float rot[3];
-	float scale[3];
-
-	rspq_block_t *dpl;
-	T3DMat4FP *modelMat;
-} Actor;
-
-Actor actor_create(uint32_t id, rspq_block_t *dpl) {
-	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
-	float posx = 0, posy = 0, posz = 0;
-	if(id == 1){
-		posz=-10.f;
-	}
-
-	Actor actor = (Actor){
-		.id = id,
-		.pos = {posx,posy,posz},
-		.rot = {0,0,0},
-		.scale = {1, 1, 1},
-		.dpl = dpl,
-		.modelMat = malloc_uncached(sizeof(T3DMat4FP) * FB_COUNT)
-	};
-
-	return actor;
-}
-
-void actor_update(Actor *actor) {
-	// actor->pos[0] = 0;
-	// actor->pos[1] = 0;
-	// actor->pos[2] = 0;
-
-	// float randRot = (float)fm_fmodf(actor->id * 123.1f, 5.0f);
-	// float randDist = (float)fm_fmodf(actor->id * 4645.987f, 30.5f) + 10.0f;
-
-	// actor->rot[0] = fm_fmodf(randRot + objTime * 1.05f, RAD_360);
-	// actor->rot[1] = fm_fmodf(randRot + objTime * 1.03f, RAD_360);
-	// actor->rot[2] = fm_fmodf(randRot + objTime * 1.2f, RAD_360);
-
-	// actor->pos[0] = randDist * fm_cosf(objTime * 1.6f + randDist);
-	// actor->pos[1] = randDist * fm_cosf(objTime * 1.5f + randRot);
-	// actor->pos[2] = randDist * fm_cosf(objTime * 1.4f + randDist*randRot);
 
 
-	t3d_mat4fp_from_srt_euler(&actor->modelMat[frameIdx], actor->scale, actor->rot, actor->pos);
+// ? FISH FUNCS
 
-	//return;
-}
 
-void actor_draw(Actor *actor) {
-	t3d_matrix_set(&actor->modelMat[frameIdx], true);
-	rspq_block_run(actor->dpl);
-}
 
-void actor_delete(Actor *actor) {
-	free_uncached(actor->modelMat);
-}
+
+
+
 
 // Shouldnt i just, init everything we will need? its all one room...
 void state_init() {
@@ -332,10 +287,6 @@ int main() {
 	rdpq_init();
 	joypad_init();
 
-	
-
-
-
 	//joypad_inputs_t padInputs;
 
 	t3d_init((T3DInitParams){});
@@ -343,18 +294,22 @@ int main() {
 	T3DViewport viewport = t3d_viewport_create_buffered(FB_COUNT);
 	rdpq_text_register_font(FONT_BUILTIN_DEBUG_MONO, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_MONO));
 
-	rspq_block_t *dpls[2];
-	T3DModel *models[2] = {
+	rspq_block_t *dpls[MODEL_TYPE];
+	T3DModel *models[MODEL_TYPE] = {
 		//load models here
-		t3d_model_load("rom:/rump.t3dm"), // INDEX 0 is gonna be the room, dont make actor from it? unknown
-		t3d_model_load("rom:/cube0.t3dm")
+		t3d_model_load("rom:/rump2.t3dm"),	// INDEX 0 is gonna be the room, dont make actor from it? unknown
+		t3d_model_load("rom:/fish_quad.t3dm") // INDEX 1 is fish
+		//t3d_model_load("rom:/cube0.t3dm"),
+		
+		
+		
 	};
 
 	//int models_size = sizeof(models)/sizeof(T3DModel);
 
-	const int triCount[2] = {12,60};
+	//const int triCount[2] = {14,2}; // ah. hardcoded lol
 
-	for(int i=0;i<2; ++i) {
+	for(int i=0;i<MODEL_TYPE; ++i) {
 		rspq_block_begin();
 		t3d_model_draw(models[i]);
 		dpls[i] = rspq_block_end();
@@ -364,22 +319,21 @@ int main() {
 
 
 	for(int j=0; j<ACTOR_COUNT; ++j) {
-		
-		actors[j] = actor_create(j, dpls[j*3 % 2]);
-		// if(j==1) {
-		// 	actors[j].pos[2] = -10.0f;
-		// }
+		actors[j] = actor_create(j, dpls[j*3 % MODEL_TYPE]);
 	}
 
-	Actor fish_storage[MAX_FISH_NO];
+	int fishCount = 12;
+	fish_t fish_storage[fishCount];
+	
+	uint8_t id = 0;
+	for (int fc = 0; fc<fishCount; ++fc ) {
+		fish_storage[fc] = fish_create(id, dpls[1*3 % MODEL_TYPE]);
+	}
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
 
 	const T3DVec3 camPos = {{0.0f, 10.0f, 0.f}};
 	T3DVec3 camTarget = {{0,0,0}};
-	T3DVec3 camDir = {{0,0,1}};
-	
-
-
+	T3DVec3 camDir = {{-1,0,0}};
 	
 
 	uint8_t colorAmbient[4] = {80,50,50, 0xFF};
@@ -389,7 +343,7 @@ int main() {
 
 	int actorCount = 2;
 
-	int fishCount = 1;
+	//int fishCount = 1;
 
 	timer_init();
 
@@ -402,6 +356,8 @@ int main() {
 
 	// ====== 2d sprite based actors ======
 	create_sprite_actor(0, display_get_width()/2, display_get_height()/2);
+
+	create_sprite_actor(1, 0.f, 0.f);
 
 	can_switch_gs = true;
 	for(;;) {
@@ -430,6 +386,9 @@ int main() {
 		if(actorCount < 0)actorCount = 0;
 		if(actorCount > ACTOR_COUNT)actorCount = ACTOR_COUNT;
 
+		if(fishCount < 0) fishCount = 0;
+		if(fishCount > MAX_FISH) fishCount = MAX_FISH;
+
 		float newTime = get_time_s();
 		float deltaTime = (newTime - objTimeLast) * baseSpeed;
 		objTimeLast = newTime;
@@ -440,6 +399,11 @@ int main() {
 		for(int i=0; i<ACTOR_COUNT; ++i) {
 			actor_update(&actors[i]);
 		}
+
+		for(int f=0; f<fishCount; ++f) {
+			fish_update(&fish_storage[f], deltaTime);
+		}
+
 		update_sprite_actors(joypad);
 		// Gamestate check?
 		
@@ -451,7 +415,7 @@ int main() {
 
 		timeUpdate = get_time_ms() - timeUpdate;
 
-		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.0f), 1.0f, 1000.0f);
+		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(55.0f), 1.0f, 1000.0f);
 		//t3d_viewport_set_ortho(&viewport, -320, 320, 240, -240, 1.0f, 100.0f);
 		t3d_viewport_look_at(&viewport, &camPos, &camTarget, &(T3DVec3){{0,1,0}});
 
@@ -478,17 +442,25 @@ int main() {
 		t3d_matrix_push_pos(1);
 		//rspq_block_run(dpls[0]); // Draw Room?
 		for(int i=0; i<actorCount; ++i) {
+			if (i==1) {
+				continue;
+			}
 			actor_draw(&actors[i]);
 		}
+
+		for(int f=0;f<fishCount; ++f) {
+			fish_draw(&fish_storage[f]);
+		}
+
 		t3d_matrix_pop(1);
 
 		// ======== DRAW 2D ========
 		rdpq_sync_pipe();
 
-		int totalTris = 0;
-		for(int i=0; i<actorCount; ++i) {
-			totalTris += triCount[(i*3) % 2];
-		}
+		// int totalTris = 0;
+		// for(int i=0; i<actorCount; ++i) {
+		// 	totalTris += triCount[(i*3) % 2];
+		// }
 
 		// um draw pointer
 
@@ -509,11 +481,13 @@ int main() {
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 210*2, "	   [C] Actors: %d", actorCount);
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 220, "[STICK] Speed : %.2f", baseSpeed);
 
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 200*2, "Triangles: %d", totalTris);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 200*2, "Triangles: %d", totalTris);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 210*2, "Update   : %.2fms", timeUpdate);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 220*2, "FPS      : %.2f", display_get_fps());
 
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
+
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "fish pos : %.2f, %.2f, %.2f", actors[1].pos[0], actors[1].pos[1], actors[1].pos[2]);
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 16*2, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
 
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 60*2, "Angle  : %.2f", angle);

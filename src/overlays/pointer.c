@@ -4,12 +4,16 @@ typedef struct pointer_actor_s {
 	actor2d_t actor;
 	float spawn_x;
 	float spawn_y;
+	float radius;
 } pointer_actor_t;
 
 static void init(actor2d_t *actor) {
 	pointer_actor_t *this = (pointer_actor_t *)actor;
 	this->spawn_x = actor->x;
 	this->spawn_y = actor->y;
+
+	//setup for slurping coins and stuff?
+	this->radius = 16.0f;
 }
 
 static bool update(actor2d_t *actor, joypad_inputs_t pad) {

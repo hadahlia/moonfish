@@ -14,6 +14,7 @@ src = $(wildcard src/*.c) #main.c
 #ovl = $(wildcard src/overlays/*.c)
 
 pointer_src = src/overlays/pointer.c
+menu_src = src/overlays/menu.c
 
 assets_png =  $(wildcard assets/*.png assets/*/*.png) # $(wildcard assets/*/*.png)
 assets_gltf = $(wildcard assets/*.glb assets/*/*.glb) #$(wildcard assets/*/*.glb)
@@ -28,7 +29,7 @@ all: $(PROJECT_NAME).z64
 MAIN_ELF_EXTERNS := $(BUILD_DIR)/$(PROJECT_NAME).externs
 MAIN_ELF_SYMBOLS := $(BUILD_DIR)/$(PROJECT_NAME).msym
 
-DSO_MODULES = pointer.dso #$(ovl:%.c=%.dso)
+DSO_MODULES = pointer.dso menu.dso #$(ovl:%.c=%.dso)
 DSO_LIST = $(addprefix filesystem/, $(DSO_MODULES))
 
 filesystem/%.sprite: assets/%.png #assets/*/%.png
@@ -51,6 +52,7 @@ $(BUILD_DIR)/$(PROJECT_NAME).elf: $(src:%.c=$(BUILD_DIR)/%.o) $(MAIN_ELF_EXTERNS
 $(MAIN_ELF_EXTERNS): $(DSO_LIST)
 
 filesystem/pointer.dso: $(pointer_src:%.c=$(BUILD_DIR)/%.o)
+filesystem/menu.dso: $(menu_src:%.c=$(BUILD_DIR)/%.o)
 
 #filesystem/%.dso: $(ovl:%.c=$(BUILD_DIR)/%.o)
 # 	@mkdir -p $(dir $@)
