@@ -69,7 +69,7 @@ static int find_free_sprite_actor() {
 	return -1;
 }
 
-static void create_sprite_actor(int type, float x, float y) {
+static void create_sprite_actor(int type, float x, float y) { //todo add scale params x_scale and y_scale, and angle?
 	if(type < MAX_SPRITE_TYPES) {
 		void *ovl_handle;
 		actor2d_class_t *class;
@@ -100,18 +100,18 @@ static void draw_sprite_actors() {
 	rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
 	for(int i=0; i<MAX_SPRITES; i++) {
 		if(spriteActors[i] && spriteActors[i]->visible) {
-			//surface_t surf = sprite_get_pixels(spriteActors[i]->sprite);
+			surface_t surf = sprite_get_pixels(spriteActors[i]->sprite);
 			// rdpq_tex_blit(&surf, spriteActors[i]->x,spriteActors[i]->y, &(rdpq_blitparms_t){
 			// 	.cx = surf.width/2, .cy = surf.height/2,
 			// 	.scale_x = spriteActors[i]->x_scale, .scale_y = spriteActors[i]->y_scale,
 			// 	.theta = spriteActors[i]->angle
 			// });
 
-			rdpq_sprite_blit(spriteActors[i]->sprite, spriteActors[i]->x,spriteActors[i]->y, NULL); //&(rdpq_blitparms_t){
-			// 	.cx = surf.width/2, .cy = surf.height/2,
-			// 	.scale_x = spriteActors[i]->x_scale, .scale_y = spriteActors[i]->y_scale,
-			// 	.theta = spriteActors[i]->angle
-			// });
+			rdpq_sprite_blit(spriteActors[i]->sprite, spriteActors[i]->x,spriteActors[i]->y, /*NULL); */ &(rdpq_blitparms_t){
+				.cx = surf.width/2, .cy = surf.height/2,
+				.scale_x = spriteActors[i]->x_scale, .scale_y = spriteActors[i]->y_scale,
+				.theta = spriteActors[i]->angle
+			});
 
 			//rdp_draw_textured_rectangle(0);
 		}
@@ -510,7 +510,7 @@ int main() {
 
 		t3d_matrix_pop(1);
 
-		// ======== DRAW 2D ========
+		
 		rdpq_sync_pipe();
 
 		// int totalTris = 0;
@@ -524,6 +524,8 @@ int main() {
 
 		rdpq_set_mode_standard();
 
+		//! ======== DRAW 2D PRE-UI ========
+
 		//! ======== INTERACTIVE UI LAYER ========
 		if(gstate == SHOP) {
 			for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
@@ -532,7 +534,7 @@ int main() {
 		}
 		
 
-		//! =================================
+		//! ======== DRAW 2D POST-UI ========
 
 		draw_sprite_actors();
 
