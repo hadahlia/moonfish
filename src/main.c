@@ -6,7 +6,11 @@
 #include "actor.h"
 #include "fish.h"
 #include "overlays/actor2d.h"
+#include "uilib.h"
 //#include "util.h"
+
+#define SHOP_BTN_NO 1u
+#define BTN_SPRITES 4u
 
 #define MODEL_TYPE 2
 #define ACTOR_COUNT 5
@@ -26,9 +30,11 @@ typedef enum {FISH = 0, AQUA = 1, SHOP = 2, SHELF = 3} GameState_t;
 //static enum GameState {FISH = 0, AQUA = 1, SHOP = 2, SHELF = 3} gstate = 1;
 static GameState_t gstate = 1;
 
-static char* state_strs[] = { "FISH", "AQUA", "SHOP", "SHELF"};
+static char* state_strs[] = { "LOUNGE?", "AQUA", "SHOP", "DEVS?"};
 
 static bool can_switch_gs = false;
+
+
 
 // SPRITE OVERLAY SHIT
 
@@ -43,11 +49,14 @@ typedef struct actor2d_info_s {
 
 static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
 	{"hpointer", "rom:/hand.ci8.sprite", "rom:/pointer.dso" },		// 0: hand pointer
-	{"menu", "rom:/dark.ci8.sprite", "rom:/menu.dso" }			   // 1: main menu
+	{"menu", "rom:/dark.ci8.sprite", "rom:/menu.dso" }			   // 1: main menu? test square black
 	// instance for coins?
 };
 
+
 static actor2d_t *spriteActors[MAX_SPRITES];
+
+
 
 static int find_free_sprite_actor() {
 
@@ -124,17 +133,12 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 }
 
 
+//todo DRAW BUTTONS
+// static void draw_tex_buttons() {
+
+// }
 
 // generic 3d actor?
-
-
-// ? FISH FUNCS
-
-
-
-
-
-
 
 // Shouldnt i just, init everything we will need? its all one room...
 void state_init() {
@@ -205,7 +209,7 @@ void state_update(float delta, T3DVec3 *dir) {
 			// dir->v[2] = 0;
 	}
 
-	t3d_vec3_lerp(dir, dir, &tDir, delta*2);
+	t3d_vec3_lerp(dir, dir, &tDir, delta*3.25);
 
 	// dir->v[0] = lerp_angle(dir->v[0], vt0, delta);
 	// dir->v[1] = lerp_angle(dir->v[1], vt1, delta);
@@ -284,6 +288,8 @@ int main() {
 
 	display_init(RESOLUTION_640x480, DEPTH_16_BPP, FB_COUNT, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
 
+	//display_set_fps_limit(30.0f);
+
 	rdpq_init();
 	joypad_init();
 
@@ -305,11 +311,15 @@ int main() {
 		
 	};
 
+	sprite_t *button_textures[BTN_SPRITES] = {
+		sprite_load("rom:/dark.ci8.sprite") // 0: debug black(ish) square
+	};
+
 	//int models_size = sizeof(models)/sizeof(T3DModel);
 
 	//const int triCount[2] = {14,2}; // ah. hardcoded lol
 
-	for(int i=0;i<MODEL_TYPE; ++i) {
+	for(int i=0; i<MODEL_TYPE; ++i) {
 		rspq_block_begin();
 		t3d_model_draw(models[i]);
 		dpls[i] = rspq_block_end();
@@ -322,12 +332,20 @@ int main() {
 		actors[j] = actor_create(j, dpls[j*3 % MODEL_TYPE]);
 	}
 
+	// GUI arrays probably
+	tex_button_t shopButtons[SHOP_BTN_NO];
+
+	for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
+		shopButtons[i] = new_tex_button(button_textures[0], 320, 250, 2, 2, "BOOO", 0.f, 0.f);
+	}
+
+
 	int fishCount = 12;
 	fish_t fish_storage[fishCount];
 	
 	uint8_t id = 0;
 	for (int fc = 0; fc<fishCount; ++fc ) {
-		fish_storage[fc] = fish_create(id, dpls[1*3 % MODEL_TYPE]);
+		fish_storage[fc] = fish_create(id, dpls[1*3 % MODEL_TYPE], fc);
 	}
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
 
@@ -354,10 +372,12 @@ int main() {
 
 	// init actors?
 
-	// ====== 2d sprite based actors ======
-	create_sprite_actor(0, display_get_width()/2, display_get_height()/2);
 
-	create_sprite_actor(1, 0.f, 0.f);
+
+	// ====== 2d sprite based actors ======
+	create_sprite_actor(0, display_get_width()/2, display_get_height()/2); //todo this is the hand pointer, should be idx 0.
+
+	//create_sprite_actor(1, 0.f, 0.f);
 
 	can_switch_gs = true;
 	for(;;) {
@@ -448,9 +468,16 @@ int main() {
 			actor_draw(&actors[i]);
 		}
 
-		for(int f=0;f<fishCount; ++f) {
-			fish_draw(&fish_storage[f]);
+		if( gstate == AQUA) {
+			for(int f=0;f<fishCount; ++f) {
+				fish_draw(&fish_storage[f]);
+			}
+		} else if (gstate == SHOP)
+		{
+			/* code */
 		}
+		
+		
 
 		t3d_matrix_pop(1);
 
@@ -471,6 +498,11 @@ int main() {
 		draw_sprite_actors();
 
 		
+		//! ======== INTERACTIVE UI LAYER ========
+		for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
+			draw_tex_button(&shopButtons[i]);
+		}
+
 		//rdpq_set_mode_copy(false);
 		//rdpq_mode_combiner(RDPQ_COMBINER_TEX);
 		//rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);

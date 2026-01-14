@@ -2,30 +2,48 @@
 
 //static bool fishright = true;
 
-float prevx = 0, prevy = 0, prevz = 0;
 
-fish_t fish_create(uint8_t variant, rspq_block_t *dpl) {
+
+// float prevx = 0, prevy = 0, prevz = 0;
+
+
+
+
+fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
-	float basex = -20.f, basey = 15.f, basez = 0;
+	//float basex = -20.f, basey = 15.f, basez = 0;
+	T3DVec3 spawnv = {{-20.f, 15.f, 0.f}};
+
+	// uh whats the idea here. spawn vector, normalized. i take random offset from -1 to 1, multiply it by tank_bounds/2, and multiply that by the normalized spawn vector
+
+
 	float posx = 0, posy = 0, posz = 0;
 
 	
-	float spawn_threshold = 5.0f;
+	//float spawn_threshold = 5.0f;
 	// if (id == 1) {
 
-	srand(getentropy32());
-	float randOffsetx = (rand() % 100) / 3000.0f + 0.03f;
-	srand(getentropy32() * 2);
-	float randOffsetz = (rand() % 100) / 30.0f + 0.13f;
 	//srand(getentropy32());
-	srand(getentropy32() + 922);
-	float randOffsety = (rand() % 100) / 3.0f + 1.13f;
+	//float randOffsetx = (rand() % 100) / 3000.0f + 0.03f;
+	float offsetX = index * 0.1f;
+	
+	srand(getentropy32() + 94374239);
+	//float randOffsety = (rand() % 100) / 3.0f + 1.13f;
+	//float randOffsety = (rand() / 1) * 2.0f - 1.0f;
+	float randOffsety = (2.0f * (rand() % 100) / 100.0f - 1.0f) * (TANK_BOUNDS_Y);
+	srand(getentropy32() + 2);
+	//float randOffsetz = (rand() % 100) / 30.0f + 0.13f;
+	//float randOffsetz = 2.0f * (rand() / 2.0f) - 1.f;
+	float randOffsetz = (2.0f * (rand() % 100) / 100.0f - 1.0f) * (TANK_BOUNDS_X*0.5f);
+	//srand(getentropy32());
+	
 	
 	
 
-	posx = basex + randOffsetx;
-	posz = basez + randOffsetz;
-	posy = basey + randOffsety;
+	posx = spawnv.v[0] + offsetX;
+	posy = spawnv.v[1] + randOffsety;
+	posz = spawnv.v[2] + randOffsetz;
+	
 
 	// float magnitude = sqrtf(posx + posy + posz)
 
@@ -33,9 +51,9 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl) {
 
 	// }
 
-	prevx = posx;
-	prevy = posy;
-	prevz = posz;
+	// prevx = posx;
+	// prevy = posy;
+	// prevz = posz;
 
 	//// fish quad test?
 	// posx = -10.f;
@@ -62,6 +80,8 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl) {
 		.isMature = false,
 		.isMerging = false,
 		.fishLeft = true,
+		.fstate = REGULAR,
+		.lifetime = 0,
 		.actor.pos = {posx, posy,posz},
 		.actor.rot = {0,0,0},
 		.actor.scale = {1,1,1},
@@ -74,32 +94,37 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl) {
 
 void fish_update(fish_t *fish, float delta) {
 
-	srand(getentropy32() + frameIdx);
-	float minoffset = (rand() % 100) / 300.0f + 0.03f;
-	float speed = FISH_SPEED + minoffset;
+	if(fish->fstate == REGULAR) {
+		srand(frameIdx);
+		float minoffset = 1.0f * (rand() / 2) / FISH_SPEED + 0.03f;
+		float speedOffset = (2.0f * (rand() % 100) / 100.0f);
+		float speed = FISH_SPEED * speedOffset;
 
-	if (fish->fishLeft) {
-		
-		fish->actor.pos[2] += speed * delta;
-	} else {
-		fish->actor.rot[1] = PI;
-		fish->actor.pos[2] -= speed * delta;
+		if (fish->fishLeft) {
+			fish->actor.rot[1] = 0;
+			fish->actor.pos[2] += speed * delta;
+		} else {
+			fish->actor.rot[1] = PI;
+			fish->actor.pos[2] -= speed * delta;
+		}
+
+
+		if (fish->actor.pos[1] > TANK_BOUNDS_Y) {
+			fish->actor.pos[1] = TANK_BOUNDS_Y;
+		} else if (fish->actor.pos[1] < 4.f) {
+			fish->actor.pos[1] = 4.f;
+		} 
+
+		if (fish->actor.pos[2] > TANK_BOUNDS_X) {
+			fish->actor.pos[2] = TANK_BOUNDS_X;
+			fish->fishLeft = false;
+		} else if (fish->actor.pos[2] < -TANK_BOUNDS_X) {
+			fish->actor.pos[2] = -TANK_BOUNDS_X;
+			fish->fishLeft = true;
+		}
 	}
 
-
-	if (fish->actor.pos[1] > TANK_BOUNDS_Y) {
-		fish->actor.pos[1] = TANK_BOUNDS_Y;
-	} else if (fish->actor.pos[1] < 0.f) {
-		fish->actor.pos[1] = 0.f;
-	} 
-
-	if (fish->actor.pos[2] > TANK_BOUNDS_X) {
-		fish->actor.pos[2] = TANK_BOUNDS_X;
-		fish->fishLeft = false;
-	} else if (fish->actor.pos[2] < -TANK_BOUNDS_X) {
-		fish->actor.pos[2] = -TANK_BOUNDS_X;
-		fish->fishLeft = true;
-	}
+	
 	
 
 	t3d_mat4fp_from_srt_euler(&fish->actor.modelMat[frameIdx], fish->actor.scale, fish->actor.rot, fish->actor.pos);

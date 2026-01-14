@@ -22,7 +22,9 @@ static bool update(actor2d_t *actor, joypad_inputs_t pad) {
 	const float speed = 0.1f; // more like sensitivity but im lazy now
 
 	
+	// FOOD AND SELECT?
 
+	//STICK
 	this->actor.x += pad.stick_x * speed;
 	this->actor.y -= pad.stick_y * speed;
 
