@@ -26,10 +26,8 @@ typedef struct tex_button_s {
 	float width;
 	float height;
 	char* text;
-
 	float text_offs_x;
 	float text_offs_y;
-
 	bool visible;
 
 	// maybe a pointer to an input function?? activated on a press, dependant on hand pointer position && radius

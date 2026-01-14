@@ -5,7 +5,7 @@ button_t new_button(float x, float y, float width, float height, char* text) {
 
 	this.x = x;
 	this.y = y;
-	this.height = width;
+	this.width = width;
 	this.height = height;
 	this.text = text;
 
@@ -19,11 +19,12 @@ tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float width, flo
 	this.sprite = sprite;
 	this.x = x;
 	this.y = y;
-	this.height = width;
+	this.width= width;
 	this.height = height;
 	this.text = text;
 	this.text_offs_x = text_offs_x;
 	this.text_offs_y = text_offs_y;
+	this.visible = true;
 
 
 	//text offset?
@@ -32,6 +33,7 @@ tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float width, flo
 }
 
 void draw_tex_button(tex_button_t *texbutt) {
+	if(texbutt->visible == false) return;
 	rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
 	//for(int i=0; i<MAX_SPRITES; i++) {
 		//if(spriteActors[i] && spriteActors[i]->visible) {
@@ -60,6 +62,7 @@ void draw_tex_button(tex_button_t *texbutt) {
 		//}
 	//}
 }
+
 
 
 //todo draw call? all ui in one

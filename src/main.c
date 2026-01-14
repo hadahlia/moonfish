@@ -133,10 +133,26 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 }
 
 
-//todo DRAW BUTTONS
+//! button inputs
 // static void draw_tex_buttons() {
 
 // }
+
+void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds) {
+	float upper_x = texbtn->x + texbtn->width;
+	float lower_x = texbtn->x - texbtn->width;
+	float upper_y = texbtn->y + texbtn->height;
+	float lower_y = texbtn->y - texbtn->height;
+	if(spr_actor->y < upper_y && spr_actor->y > lower_y) {
+		//you within the button y
+		if(spr_actor->x < upper_x && spr_actor->x > lower_x) {
+			//you ALSO within button x. YAY
+			texbtn->visible = false;
+			*inbounds = true;
+		}
+
+	}
+}
 
 // generic 3d actor?
 
@@ -336,7 +352,7 @@ int main() {
 	tex_button_t shopButtons[SHOP_BTN_NO];
 
 	for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
-		shopButtons[i] = new_tex_button(button_textures[0], 320, 250, 2, 2, "BOOO", 0.f, 0.f);
+		shopButtons[i] = new_tex_button(button_textures[0], 320, 250, 64, 64, "BOOO", 0.f, 0.f);
 	}
 
 
@@ -377,6 +393,7 @@ int main() {
 	// ====== 2d sprite based actors ======
 	create_sprite_actor(0, display_get_width()/2, display_get_height()/2); //todo this is the hand pointer, should be idx 0.
 
+	
 	//create_sprite_actor(1, 0.f, 0.f);
 
 	can_switch_gs = true;
@@ -397,6 +414,18 @@ int main() {
 		
 		if(joypad.btn.r) {
 			state_switch(gs+1, switch_delay);
+		}
+
+		bool is_apress = false;
+		bool inbounds = false;
+		bool *bounds_ptr = &inbounds;
+
+		if(joypad.btn.a) {
+			for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
+				btn_input(&shopButtons[i], spriteActors[0], bounds_ptr);
+				is_apress = true;
+			}
+			
 		}
 
 		
@@ -495,13 +524,20 @@ int main() {
 
 		rdpq_set_mode_standard();
 
+		//! ======== INTERACTIVE UI LAYER ========
+		if(gstate == SHOP) {
+			for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
+				draw_tex_button(&shopButtons[i]);
+			}
+		}
+		
+
+		//! =================================
+
 		draw_sprite_actors();
 
 		
-		//! ======== INTERACTIVE UI LAYER ========
-		for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
-			draw_tex_button(&shopButtons[i]);
-		}
+		
 
 		//rdpq_set_mode_copy(false);
 		//rdpq_mode_combiner(RDPQ_COMBINER_TEX);
@@ -519,7 +555,9 @@ int main() {
 
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
 
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "fish pos : %.2f, %.2f, %.2f", actors[1].pos[0], actors[1].pos[1], actors[1].pos[2]);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "fish pos : %.2f, %.2f, %.2f", actors[1].pos[0], actors[1].pos[1], actors[1].pos[2]); kinda pointless now
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "a press: %d inbounds?: %d", is_apress, inbounds);
+
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 16*2, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
 
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 60*2, "Angle  : %.2f", angle);
