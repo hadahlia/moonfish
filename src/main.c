@@ -9,8 +9,8 @@
 #include "uilib.h"
 //#include "util.h"
 
-#define SHOP_BTN_NO 1u
-#define BTN_SPRITES 4u
+#define SHOP_BTN_NO 2u
+//#define BTN_SPRITES 4u
 
 #define MODEL_TYPE 2
 #define ACTOR_COUNT 5
@@ -30,7 +30,7 @@ typedef enum {FISH = 0, AQUA = 1, SHOP = 2, SHELF = 3} GameState_t;
 //static enum GameState {FISH = 0, AQUA = 1, SHOP = 2, SHELF = 3} gstate = 1;
 static GameState_t gstate = 1;
 
-static char* state_strs[] = { "LOUNGE?", "AQUA", "SHOP", "DEVS?"};
+static char* state_strs[4] = { "LOUNGE?", "AQUA", "SHOP", "DEVS?"};
 
 static bool can_switch_gs = false;
 
@@ -39,7 +39,13 @@ static bool can_switch_gs = false;
 // SPRITE OVERLAY SHIT
 
 #define MAX_SPRITES 99
-#define MAX_SPRITE_TYPES 2
+#define MAX_SPRITE_TYPES 1
+
+#define FISH_TYPES 1
+
+static const char* fishMats[FISH_TYPES] = { //todo
+	"",
+};
 
 typedef struct actor2d_info_s {
 	const char *name;
@@ -49,7 +55,7 @@ typedef struct actor2d_info_s {
 
 static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
 	{"hpointer", "rom:/hand.ci8.sprite", "rom:/pointer.dso" },		// 0: hand pointer
-	{"menu", "rom:/dark.ci8.sprite", "rom:/menu.dso" }			   // 1: main menu? test square black
+	//{"menu", "rom:/dark.ci8.sprite", "rom:/menu.dso" }			   // 1: main menu? test square black
 	// instance for coins?
 };
 
@@ -139,6 +145,7 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 // }
 
 void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds) {
+	if(!texbtn->visible) return;
 	float upper_x = texbtn->x + texbtn->width;
 	float lower_x = texbtn->x - texbtn->width;
 	float upper_y = texbtn->y + texbtn->height;
@@ -327,10 +334,15 @@ int main() {
 		
 	};
 
-	sprite_t *button_textures[BTN_SPRITES] = {
-		sprite_load("rom:/dark.ci8.sprite") // 0: debug black(ish) square
+	sprite_t *button_textures[SHOP_BTN_NO] = {
+		sprite_load("rom:/dark.ci8.sprite"), // 0: debug black(ish) square
+		sprite_load("rom:/hand.ci8.sprite") // 1: again, test
 	};
 
+	// const char *button_textures[1] = {
+	// 	"rom:/dark.ci8.sprite" // 0: debug black(ish) square
+	// };
+	
 	//int models_size = sizeof(models)/sizeof(T3DModel);
 
 	//const int triCount[2] = {14,2}; // ah. hardcoded lol
@@ -352,7 +364,13 @@ int main() {
 	tex_button_t shopButtons[SHOP_BTN_NO];
 
 	for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
-		shopButtons[i] = new_tex_button(button_textures[0], 320, 250, 64, 64, "BOOO", 0.f, 0.f);
+
+		float target_x = 320/2.0f;
+		float tmpscalar = i * (640/4.0f);
+		float target_y = 250.f;
+		target_x += tmpscalar;
+
+		shopButtons[i] = new_tex_button(button_textures[0], target_x, target_y, 2.0f, 32.f, 32.f, "BOOO", 0.f, 0.f);
 	}
 
 
@@ -360,7 +378,7 @@ int main() {
 	fish_t fish_storage[fishCount];
 	
 	uint8_t id = 0;
-	for (int fc = 0; fc<fishCount; ++fc ) {
+	for (int fc = 0; fc<fishCount; ++fc ) { 
 		fish_storage[fc] = fish_create(id, dpls[1*3 % MODEL_TYPE], fc);
 	}
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
@@ -379,9 +397,12 @@ int main() {
 
 	//int fishCount = 1;
 
+
+	//? @timers
 	timer_init();
 
 	timer_link_t *switch_delay;
+	//timer_link_t *just_pressed_time;
 	
 
 	//state_init();
@@ -396,6 +417,9 @@ int main() {
 	
 	//create_sprite_actor(1, 0.f, 0.f);
 
+	bool isa_justpress = false;
+	bool can_apress = true;
+
 	can_switch_gs = true;
 	for(;;) {
 		//! ======== UPDATE LOOP ========
@@ -408,6 +432,7 @@ int main() {
 
 		int16_t gs = (int16_t)gstate;
 
+		//! ======== INPUT IG ========
 		if(joypad.btn.l) {
 			state_switch(gs-1, switch_delay);
 		} 
@@ -416,17 +441,25 @@ int main() {
 			state_switch(gs+1, switch_delay);
 		}
 
-		bool is_apress = false;
+		
 		bool inbounds = false;
 		bool *bounds_ptr = &inbounds;
 
-		if(joypad.btn.a) {
+		if(can_apress && joypad.btn.a) {
+			//isa_justpress = true;
 			for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
 				btn_input(&shopButtons[i], spriteActors[0], bounds_ptr);
-				is_apress = true;
+				
 			}
-			
+			can_apress = false;
+		} else if(!joypad.btn.a) {
+			can_apress = true;
 		}
+
+		// if(isa_justpress) {
+			
+		// 	isa_justpress = false;
+		// }
 
 		
 
@@ -477,7 +510,7 @@ int main() {
 		t3d_viewport_attach(&viewport);
 		//rdpq_mode_zbuf();
 
-		rdpq_set_prim_color(RGBA32(0xFF, 0xFF, 0xFF, 0xFF));
+		rdpq_set_prim_color(RGBA32(0, 0, 0, 0xFF));
 
 		t3d_screen_clear_color(RGBA32(100,120,220,0xFF));
 		t3d_screen_clear_depth();
@@ -501,10 +534,10 @@ int main() {
 			for(int f=0;f<fishCount; ++f) {
 				fish_draw(&fish_storage[f]);
 			}
-		} else if (gstate == SHOP)
-		{
+		} //else if (gstate == SHOP)
+		//{
 			/* code */
-		}
+		//}
 		
 		
 
@@ -523,22 +556,30 @@ int main() {
 		//rdp_detach_display();
 
 		rdpq_set_mode_standard();
+		rdpq_mode_filter(FILTER_POINT);
+		rdpq_mode_alphacompare(1);
+		rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
 
 		//! ======== DRAW 2D PRE-UI ========
+		
+		//rdpq_clear(RGBA32(0, 0, 0, 0xFF));
 
 		//! ======== INTERACTIVE UI LAYER ========
+		//rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
 		if(gstate == SHOP) {
 			for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
 				draw_tex_button(&shopButtons[i]);
+				
 			}
 		}
+
 		
 
 		//! ======== DRAW 2D POST-UI ========
 
 		draw_sprite_actors();
 
-		
+		//graphics_set_trans_pride() 
 		
 
 		//rdpq_set_mode_copy(false);
@@ -551,6 +592,8 @@ int main() {
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 210*2, "	   [C] Actors: %d", actorCount);
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 220, "[STICK] Speed : %.2f", baseSpeed);
 
+
+
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 200*2, "Triangles: %d", totalTris);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 210*2, "Update   : %.2fms", timeUpdate);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 220*2, "FPS      : %.2f", display_get_fps());
@@ -558,7 +601,7 @@ int main() {
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "fish pos : %.2f, %.2f, %.2f", actors[1].pos[0], actors[1].pos[1], actors[1].pos[2]); kinda pointless now
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "a press: %d inbounds?: %d", is_apress, inbounds);
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "a press: %d inbounds?: %d", isa_justpress, inbounds);
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 16*2, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
 

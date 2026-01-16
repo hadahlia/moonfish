@@ -12,7 +12,7 @@
 fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
 	//float basex = -20.f, basey = 15.f, basez = 0;
-	T3DVec3 spawnv = {{-20.f, 15.f, 0.f}};
+	T3DVec3 spawnv = {{-20.f, 10.f, 0.f}};
 
 	// uh whats the idea here. spawn vector, normalized. i take random offset from -1 to 1, multiply it by tank_bounds/2, and multiply that by the normalized spawn vector
 
@@ -27,11 +27,11 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 	//float randOffsetx = (rand() % 100) / 3000.0f + 0.03f;
 	float offsetX = index * 0.1f;
 	
-	srand(getentropy32() + 94374239);
+	srand((getentropy32()) + frameIdx);
 	//float randOffsety = (rand() % 100) / 3.0f + 1.13f;
 	//float randOffsety = (rand() / 1) * 2.0f - 1.0f;
 	float randOffsety = (2.0f * (rand() % 100) / 100.0f - 1.0f) * (TANK_BOUNDS_Y);
-	srand(getentropy32() + 2);
+	//srand((getentropy32()) + frameIdx + 2);
 	//float randOffsetz = (rand() % 100) / 30.0f + 0.13f;
 	//float randOffsetz = 2.0f * (rand() / 2.0f) - 1.f;
 	float randOffsetz = (2.0f * (rand() % 100) / 100.0f - 1.0f) * (TANK_BOUNDS_X*0.5f);
