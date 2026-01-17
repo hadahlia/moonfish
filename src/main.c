@@ -43,9 +43,9 @@ static bool can_switch_gs = false;
 
 #define FISH_TYPES 1
 
-static const char* fishMats[FISH_TYPES] = { //todo
-	"",
-};
+// static const char* fishMats[FISH_TYPES] = { //todo nvm manual approach??
+// 	"rom:/buppin.ci8.sprite",
+// };
 
 typedef struct actor2d_info_s {
 	const char *name;
@@ -144,7 +144,7 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 
 // }
 
-void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds) {
+static void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds) {
 	if(!texbtn->visible) return;
 	float upper_x = texbtn->x + texbtn->width;
 	float lower_x = texbtn->x - texbtn->width;
@@ -164,23 +164,35 @@ void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds) {
 // generic 3d actor?
 
 // Shouldnt i just, init everything we will need? its all one room...
-void state_init() {
+static void state_init(xm64player_t *xm) {
 	switch(gstate) {
 		case 0:
 			//FISH
+			
+			
 			break;
 		case 1:
 			//AQUA
+			//if(mixer_ch_playing(0)) xm64player_close(xm);
+			//xm64player_close(xm);
+			xm64player_open(xm, "rom:/computer_fish.xm64");
+			xm64player_play(xm, 0);
+			
 			break;
 		case 2:
 			//SHOP
+			//if(mixer_ch_playing(0)) xm64player_close(xm);
+			xm64player_open(xm, "rom:/mountain_ant_steve.xm64");
+			xm64player_play(xm, 0);
 			break;
 		case 3:
+			
 			//SHELF
+			//if(mixer_ch_playing(0)) xm64player_close(xm);
 	}
 }
 
-static float angle = 0.f;
+//static float angle = 0.f;
 
 void state_update(float delta, T3DVec3 *dir) {
 
@@ -260,10 +272,14 @@ void on_switch_end(int ovfl) {
 	
 // }
 
-void state_switch(int16_t new_state, timer_link_t *sd) {
+void state_switch(int16_t new_state, timer_link_t *sd, xm64player_t *xm) {
 	//if can switch:
 	if(can_switch_gs == false) return;
 
+	if(mixer_ch_playing(0)) xm64player_close(xm);
+	
+
+	//? play OUR sfx here!
 
 	// if(new_state > 3) {
 	// 	gstate = 0;
@@ -277,6 +293,19 @@ void state_switch(int16_t new_state, timer_link_t *sd) {
 
 	
 
+	// switch(new_state) {
+	// 	//case FISH:
+	// 	case AQUA:
+			
+	// 	case SHOP:
+			
+	// 	//case SHELF:
+	// 	default:
+	// 		xm64player_stop(xm);
+	// }
+
+	
+
 	if (new_state < 0) {
 		gstate = SHELF;
 	} else if(new_state > 3) {
@@ -284,6 +313,8 @@ void state_switch(int16_t new_state, timer_link_t *sd) {
 	} else {
 		gstate = new_state;
 	}
+
+	state_init(xm);
 	
 	can_switch_gs = false;
 	sd = new_timer(TIMER_TICKS(450000), TF_ONE_SHOT, on_switch_end);
@@ -302,16 +333,21 @@ int main() {
 		debug_init_usblog();
 		asset_init_compression(2);
 
-	//audio init!
-	// audio_init(44100, 4);
-	// mixer_init(32);
+	//! ======== AUDIO SETUP ========
+	audio_init(48000, 4);
+	mixer_init(10);
+
+	xm64player_t xm;
+
+
+	
 
 
 	dfs_init(DFS_DEFAULT_LOCATION);
 
 	display_init(RESOLUTION_640x480, DEPTH_16_BPP, FB_COUNT, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
 
-	//display_set_fps_limit(30.0f);
+	display_set_fps_limit(30.f);
 
 	rdpq_init();
 	joypad_init();
@@ -347,11 +383,22 @@ int main() {
 
 	//const int triCount[2] = {14,2}; // ah. hardcoded lol
 
+	// T3DMaterial *mat = t3d_model_get_material(models[1], "buppin.ci8.png");
+
+	// T3DObject *obj = t3d_model_get_object(models[1]);
+
 	for(int i=0; i<MODEL_TYPE; ++i) {
+		
+		//t3d_model_draw_material(&mat,NULL);
+		//t3d_model_draw_object(obj, NULL);
+
 		rspq_block_begin();
 		t3d_model_draw(models[i]);
 		dpls[i] = rspq_block_end();
 	}
+
+	//? Fish Block?
+
 
 	Actor actors[ACTOR_COUNT];
 
@@ -405,7 +452,7 @@ int main() {
 	//timer_link_t *just_pressed_time;
 	
 
-	//state_init();
+	state_init(&xm);
 
 	// init actors?
 
@@ -423,6 +470,9 @@ int main() {
 	can_switch_gs = true;
 	for(;;) {
 		//! ======== UPDATE LOOP ========
+
+		
+
 		joypad_poll();
 		joypad_inputs_t joypad = joypad_get_inputs(JOYPAD_PORT_1);
 
@@ -434,11 +484,11 @@ int main() {
 
 		//! ======== INPUT IG ========
 		if(joypad.btn.l) {
-			state_switch(gs-1, switch_delay);
+			state_switch(gs-1, switch_delay, &xm);
 		} 
 		
 		if(joypad.btn.r) {
-			state_switch(gs+1, switch_delay);
+			state_switch(gs+1, switch_delay, &xm);
 		}
 
 		
@@ -477,6 +527,16 @@ int main() {
 		objTime += deltaTime;
 
 		float timeUpdate = get_time_ms();
+
+		if(audio_can_write()) {
+			short *buf = audio_write_begin();
+
+			mixer_poll(buf, audio_get_buffer_length());
+
+			//mixer_try_play();
+
+			audio_write_end();
+		}
 
 		for(int i=0; i<ACTOR_COUNT; ++i) {
 			actor_update(&actors[i]);
@@ -605,7 +665,7 @@ int main() {
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 16*2, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
 
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 60*2, "Angle  : %.2f", angle);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 60*2, "Angle  : %.2f", angle);
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16, 40, "room : %.2f, %.2f, %.2f", actors[0].pos[0], actors[0].pos[1], actors[0].pos[2]);
 
