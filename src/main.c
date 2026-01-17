@@ -12,7 +12,7 @@
 #define SHOP_BTN_NO 2u
 //#define BTN_SPRITES 4u
 
-#define MODEL_TYPE 2
+#define MODEL_TYPE 3
 #define ACTOR_COUNT 5
 //#define MAX_FISH_NO 40
 
@@ -377,7 +377,8 @@ int main() {
 	T3DModel *models[MODEL_TYPE] = {
 		//load models here
 		t3d_model_load("rom:/rump2.t3dm"),	// INDEX 0 is gonna be the room, dont make actor from it? unknown
-		t3d_model_load("rom:/fish_quad.t3dm") // INDEX 1 is fish
+		t3d_model_load("rom:/mullet.t3dm"), // t1 fish, starting from index 1
+		t3d_model_load("rom:/fish_quad.t3dm") // T5 the og fish, the oscar
 		//t3d_model_load("rom:/cube0.t3dm"),
 		
 		
@@ -418,7 +419,7 @@ int main() {
 
 
 	for(int j=0; j<ACTOR_COUNT; ++j) {
-		actors[j] = actor_create(j, dpls[j*3 % MODEL_TYPE]);
+		actors[j] = actor_create(j, dpls[j*3 % 2]);
 	}
 
 	// GUI arrays probably
@@ -434,13 +435,13 @@ int main() {
 		shopButtons[i] = new_tex_button(button_textures[0], target_x, target_y, 2.0f, 32.f, 32.f, "BOOO", 0.f, 0.f);
 	}
 
-
+	//? ====== FISH STUFF ======
 	int fishCount = 12;
 	fish_t fish_storage[fishCount];
 	
-	uint8_t id = 0;
+	uint8_t fishId = 1;
 	for (int fc = 0; fc<fishCount; ++fc ) { 
-		fish_storage[fc] = fish_create(id, dpls[1*3 % MODEL_TYPE], fc);
+		fish_storage[fc] = fish_create(fishId, dpls[1*3 % 2], fc);
 	}
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
 
