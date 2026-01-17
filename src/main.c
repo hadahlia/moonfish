@@ -175,15 +175,19 @@ static void state_init(xm64player_t *xm) {
 			//AQUA
 			//if(mixer_ch_playing(0)) xm64player_close(xm);
 			//xm64player_close(xm);
-			xm64player_open(xm, "rom:/computer_fish.xm64");
-			xm64player_play(xm, 0);
+
+
+			//xm64player_open(xm, "rom:/computer_fish.xm64");
+			//xm64player_play(xm, 0);
 			
 			break;
 		case 2:
 			//SHOP
 			//if(mixer_ch_playing(0)) xm64player_close(xm);
+
+
 			xm64player_open(xm, "rom:/mountain_ant_steve.xm64");
-			xm64player_play(xm, 0);
+			xm64player_play(xm, 2);
 			break;
 		case 3:
 			
@@ -260,7 +264,7 @@ void state_update(float delta, T3DVec3 *dir) {
 void on_switch_end(int ovfl) {
 	can_switch_gs = true;
 
-	
+	//mixer_ch_stop(1);
 	// console_clear();
 
 	// printf("timer ended");
@@ -272,12 +276,18 @@ void on_switch_end(int ovfl) {
 	
 // }
 
-void state_switch(int16_t new_state, timer_link_t *sd, xm64player_t *xm) {
+void state_switch(int16_t new_state, timer_link_t *sd, xm64player_t *xm, wav64_t *wav) {
 	//if can switch:
 	if(can_switch_gs == false) return;
 
-	if(mixer_ch_playing(0)) xm64player_close(xm);
+	if(mixer_ch_playing(2)) xm64player_close(xm);
+	//if(mixer_ch_playing(0)) wav64_close(wav);
 	
+
+
+	wav64_open(wav, "rom:/dimp.wav64");
+
+	wav64_play(wav, 0);
 
 	//? play OUR sfx here!
 
@@ -335,10 +345,14 @@ int main() {
 
 	//! ======== AUDIO SETUP ========
 	audio_init(48000, 4);
-	mixer_init(10);
+	mixer_init(32);
+	//mixer_ch_set_limits()
+	wav64_init_compression(3);
 
 	xm64player_t xm;
 
+	wav64_t wav;
+	
 
 	
 
@@ -484,11 +498,11 @@ int main() {
 
 		//! ======== INPUT IG ========
 		if(joypad.btn.l) {
-			state_switch(gs-1, switch_delay, &xm);
+			state_switch(gs-1, switch_delay, &xm, &wav);
 		} 
 		
 		if(joypad.btn.r) {
-			state_switch(gs+1, switch_delay, &xm);
+			state_switch(gs+1, switch_delay, &xm, &wav);
 		}
 
 		

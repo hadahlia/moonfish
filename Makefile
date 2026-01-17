@@ -18,12 +18,14 @@ menu_src = src/overlays/menu.c
 
 assets_png =  $(wildcard assets/*.png assets/*/*.png) # $(wildcard assets/*/*.png)
 assets_xm = $(wildcard assets/sound/*.xm)
+assets_wav = $(wildcard assets/sound/*.wav)
 assets_gltf = $(wildcard assets/*.glb assets/*/*.glb) #$(wildcard assets/*/*.glb)
 # assets_conv = $(addprefix filesystem/,$(notdir $(assets_png:%.png=%.sprite))) \
 # 			  $(addprefix filesystem/,$(notdir $(assets_gltf:%.glb=%.t3dm)))
 assets_conv = $(addprefix filesystem/,$(subst assets/, ,$(assets_png:%.png=%.sprite))) \
 			  $(addprefix filesystem/,$(subst assets/, ,$(assets_gltf:%.glb=%.t3dm))) \
-			  $(addprefix filesystem/,$(subst assets/, ,$(assets_xm:%.xm=%.xm64)))
+			  $(addprefix filesystem/,$(subst assets/, ,$(assets_xm:%.xm=%.xm64))) \
+			  $(addprefix filesystem/,$(subst assets/, ,$(assets_wav:%.wav=%.wav64)))
 
 
 all: $(PROJECT_NAME).z64
@@ -50,8 +52,11 @@ filesystem/sound/%.xm64: assets/sound/%.xm
 	@mkdir -p $(dir $@)
 	@echo "    [AUDIO] $@"
 	@$(N64_AUDIOCONV) $(AUDIOCONV_FLAGS) -o filesystem "$<"
-# remove_empty: $(dir )
-# 	rmdir filesystem/*
+
+filesystem/sound/%.wav64: assets/sound/%.wav
+	@mkdir -p $(dir $@)
+	@echo "    [AUDIO] $@"
+	@$(N64_AUDIOCONV) --wav-compress 3 -o filesystem $<
 
 $(BUILD_DIR)/$(PROJECT_NAME).dfs: $(assets_conv) $(DSO_LIST)
 $(BUILD_DIR)/$(PROJECT_NAME).elf: $(src:%.c=$(BUILD_DIR)/%.o) $(MAIN_ELF_EXTERNS)
