@@ -12,6 +12,19 @@ button_t new_button(float x, float y, float width, float height, char* text) {
 	return this;
 }
 
+gui_element_t new_gui_thing(sprite_t *sprite, float posx, float posy, float scale, char* text, float text_offs_x, float text_offs_y) {
+	gui_element_t gui = (gui_element_t){
+		.sprite = sprite,
+		.x = posx, .y = posy,
+		.text = text,
+		.text_offs_x = text_offs_x, .text_offs_y = text_offs_y,
+		.visible = true,
+		.angle = 0.f
+
+	};
+
+	return gui;
+}
 
 tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float scale, float width, float height, char* text, float text_offs_x, float text_offs_y) {
 	// tex_button_t this;
@@ -44,6 +57,26 @@ tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float scale, flo
 
 	return button;
 }
+
+
+void draw_gui_thing(gui_element_t *guithing) {
+	if(!guithing->visible) return;
+
+	float text_x = guithing->x + guithing->text_offs_x;
+	float text_y = guithing->y + guithing->text_offs_y;
+
+	rdpq_sprite_blit(guithing->sprite, guithing->x, guithing->y, &(rdpq_blitparms_t){
+		.cx = guithing->sprite->width/2, .cy = guithing->sprite->height/2,
+		.scale_x = guithing->x_scale, .scale_y = guithing->y_scale,
+		.theta = guithing->angle
+	});
+
+
+	rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, text_x, text_y, guithing->text);
+
+	rdpq_set_mode_standard();
+}
+
 
 void draw_tex_button(tex_button_t *texbutt) {
 	if(!texbutt->visible) return;

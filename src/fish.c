@@ -12,7 +12,7 @@
 fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
 	//float basex = -20.f, basey = 15.f, basez = 0;
-	T3DVec3 spawnv = {{-20.f, 10.f, 0.f}};
+	T3DVec3 spawnv = {{-25.f, 10.f, 0.f}};
 
 	// uh whats the idea here. spawn vector, normalized. i take random offset from -1 to 1, multiply it by tank_bounds/2, and multiply that by the normalized spawn vector
 
@@ -80,8 +80,10 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 		.isMature = false,
 		.isMerging = false,
 		.fishLeft = true,
+		.isDead = false,
 		.fstate = REGULAR,
 		.lifetime = 0,
+		.starvetime = 10000,
 		.actor.pos = {posx, posy,posz},
 		.actor.rot = {0,0,0},
 		.actor.scale = {1,1,1},
@@ -93,8 +95,19 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 }
 
 void fish_update(fish_t *fish, float delta) {
+	fish->lifetime += 1;
+	if(fish->starvetime > 0) {
+		fish->starvetime -= 1;
+	}
+
+	if(fish->starvetime < 9000) {
+		fish->isDead = true;
+	}
+	
 
 	if(fish->fstate == REGULAR) {
+		//? IDLE ESSENTIALLY
+
 		srand(frameIdx);
 		float minoffset = 1.0f * (rand() / 2) / FISH_SPEED + 0.03f;
 		float speedOffset = (2.0f * (rand() % 100) / 100.0f);
@@ -122,6 +135,11 @@ void fish_update(fish_t *fish, float delta) {
 			fish->actor.pos[2] = -TANK_BOUNDS_X;
 			fish->fishLeft = true;
 		}
+	
+	} else if(fish->fstate == HUNGRY) {
+
+	} else if(fish->fstate == SMOOCH) {
+		//? MERGING STATE
 	}
 
 	
@@ -133,6 +151,7 @@ void fish_update(fish_t *fish, float delta) {
 }
 
 void fish_draw(fish_t *fish) {
+	if(fish->isDead == true) { return; }
 	t3d_matrix_set(&fish->actor.modelMat[frameIdx], true);
 	rspq_block_run(fish->actor.dpl);
 }

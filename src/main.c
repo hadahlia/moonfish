@@ -3,13 +3,17 @@
 #include <t3d/t3dmodel.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "global.h"
 #include "actor.h"
 #include "fish.h"
+#include "kibble.h"
 #include "overlays/actor2d.h"
 #include "uilib.h"
+
 //#include "util.h"
 
 #define SHOP_BTN_NO 2u
+#define GUI_THING_NO 2u
 //#define BTN_SPRITES 4u
 
 #define MODEL_TYPE 3
@@ -58,6 +62,8 @@ static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
 	//{"menu", "rom:/dark.ci8.sprite", "rom:/menu.dso" }			   // 1: main menu? test square black
 	// instance for coins?
 };
+
+//does all my gui have to be overlays? :thinking:
 
 
 static actor2d_t *spriteActors[MAX_SPRITES];
@@ -376,10 +382,11 @@ int main() {
 	rspq_block_t *dpls[MODEL_TYPE];
 	T3DModel *models[MODEL_TYPE] = {
 		//load models here
-		t3d_model_load("rom:/rump2.t3dm"),	// INDEX 0 is gonna be the room, dont make actor from it? unknown
+		t3d_model_load("rom:/room_05.t3dm"),	// INDEX 0 is gonna be the room, dont make actor from it? unknown
 		t3d_model_load("rom:/mullet.t3dm"), // t1 fish, starting from index 1
-		t3d_model_load("rom:/fish_quad.t3dm") // T5 the og fish, the oscar
+		//t3d_model_load("rom:/fish_quad.t3dm"), // T5 the og fish, the oscar
 		//t3d_model_load("rom:/cube0.t3dm"),
+		t3d_model_load("rom:/kibble_quad.t3dm") // food will be, whatever index this is. 2 atm
 		
 		
 		
@@ -388,6 +395,11 @@ int main() {
 	sprite_t *button_textures[SHOP_BTN_NO] = {
 		sprite_load("rom:/dark.ci8.sprite"), // 0: debug black(ish) square
 		sprite_load("rom:/hand.ci8.sprite") // 1: again, test
+	};
+
+	sprite_t *gui_sprites[GUI_THING_NO] = {
+		sprite_load("rom:/coin.ci8.sprite"), // coin counter
+		sprite_load("rom:/16x.ci4.sprite")
 	};
 
 	// const char *button_textures[1] = {
@@ -424,6 +436,7 @@ int main() {
 
 	// GUI arrays probably
 	tex_button_t shopButtons[SHOP_BTN_NO];
+	gui_element_t guiThings[GUI_THING_NO];
 
 	for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
 
@@ -435,9 +448,21 @@ int main() {
 		shopButtons[i] = new_tex_button(button_textures[0], target_x, target_y, 2.0f, 32.f, 32.f, "BOOO", 0.f, 0.f);
 	}
 
+	for(uint8_t g = 0;g<GUI_THING_NO;++g) {
+		// set arg struct array?
+		float uh = g * 32.f;
+		guiThings[g] = new_gui_thing( gui_sprites[g] ,480 + uh, 25, 1.0f, "SCORE", 40, 0);
+	}
+
 	//? ====== FISH STUFF ======
-	int fishCount = 12;
+	fishCount = 12;
 	fish_t fish_storage[fishCount];
+
+	kibble_t food_storage[3];
+
+	for (int k=0; k<3; ++k) {
+		food_storage[k] = food_create(dpls[3*3 %2]);
+	}
 	
 	uint8_t fishId = 1;
 	for (int fc = 0; fc<fishCount; ++fc ) { 
@@ -479,8 +504,10 @@ int main() {
 	
 	//create_sprite_actor(1, 0.f, 0.f);
 
-	bool isa_justpress = false;
+	//bool isa_justpress = false;
 	bool can_apress = true;
+	//bool isb_justpress = false;
+	bool can_bpress = true;
 
 	can_switch_gs = true;
 	for(;;) {
@@ -509,6 +536,13 @@ int main() {
 		
 		bool inbounds = false;
 		bool *bounds_ptr = &inbounds;
+
+		if(can_bpress && joypad.btn.b) {
+			//contextual menu func
+			can_bpress = false;
+		} else if(!joypad.btn.b) {
+			can_bpress = true;
+		}
 
 		if(can_apress && joypad.btn.a) {
 			//isa_justpress = true;
@@ -561,6 +595,10 @@ int main() {
 			fish_update(&fish_storage[f], deltaTime);
 		}
 
+		for(int k=0;k<3;++k) {
+			food_update(&food_storage[k], deltaTime);
+		}
+
 		update_sprite_actors(joypad);
 		// Gamestate check?
 		
@@ -609,6 +647,9 @@ int main() {
 			for(int f=0;f<fishCount; ++f) {
 				fish_draw(&fish_storage[f]);
 			}
+			for(int k=0;k<3;++k) {
+				food_draw(&food_storage[k]);
+			}
 		} //else if (gstate == SHOP)
 		//{
 			/* code */
@@ -654,6 +695,12 @@ int main() {
 
 		draw_sprite_actors();
 
+		for(uint8_t i = 0; i<GUI_THING_NO; ++i) {
+			//draw_tex_button(&shopButtons[i]);
+			draw_gui_thing(&guiThings[i]);
+		}
+		
+
 		//graphics_set_trans_pride() 
 		
 
@@ -676,7 +723,7 @@ int main() {
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "fish pos : %.2f, %.2f, %.2f", actors[1].pos[0], actors[1].pos[1], actors[1].pos[2]); kinda pointless now
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "a press: %d inbounds?: %d", isa_justpress, inbounds);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "a press: %d inbounds?: %d", isa_justpress, inbounds);
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 16*2, 16*2, "Stick    : %+04d,%+04d", joypad.stick_x, joypad.stick_y);
 

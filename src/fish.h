@@ -27,10 +27,12 @@ typedef struct fish_s {
 	bool isMerging;
 
 	bool fishLeft;
+	bool isDead;
 
 	FishState_t fstate;
 
-	int lifetime;
+	uint64_t lifetime;
+	uint64_t starvetime;
 
 } fish_t;
 

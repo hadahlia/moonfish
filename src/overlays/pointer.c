@@ -13,7 +13,7 @@ static void init(actor2d_t *actor) {
 	this->spawn_y = actor->y;
 
 	//setup for slurping coins and stuff?
-	this->radius = 16.0f;
+	this->radius = 8.0f;
 }
 
 static bool update(actor2d_t *actor, joypad_inputs_t pad) {
