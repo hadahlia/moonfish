@@ -4,11 +4,12 @@
 //#include "actor2d.h"
 //#include <stdlib.h>
 #include "actor.h"
+#include <stdbool.h>
 
 #define MAX_FISH 255U
 
 #define TANK_BOUNDS_X 12.0f
-#define TANK_BOUNDS_Y 12.0f
+#define TANK_BOUNDS_Y 16.0f
 
 #define FISH_SPEED 2.0f
 

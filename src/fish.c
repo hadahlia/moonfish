@@ -100,9 +100,9 @@ void fish_update(fish_t *fish, float delta) {
 		fish->starvetime -= 1;
 	}
 
-	if(fish->starvetime < 9000) {
-		fish->isDead = true;
-	}
+	// if(fish->starvetime < 9000) {
+	// 	fish->isDead = true;
+	// }
 	
 
 	if(fish->fstate == REGULAR) {

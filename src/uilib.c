@@ -79,7 +79,7 @@ void draw_gui_thing(gui_element_t *guithing) {
 
 
 void draw_tex_button(tex_button_t *texbutt) {
-	if(!texbutt->visible) return;
+	if(!texbutt || !texbutt->visible) return;
 	//rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
 	float text_x = texbutt->x + texbutt->text_offs_x;
 	float text_y = texbutt->y + texbutt->text_offs_y;

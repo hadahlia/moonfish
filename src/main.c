@@ -9,15 +9,18 @@
 #include "kibble.h"
 #include "overlays/actor2d.h"
 #include "uilib.h"
+#include "bubble.h"
 
 //#include "util.h"
 
 #define SHOP_BTN_NO 2u
 #define GUI_THING_NO 2u
+
+#define MAX_FOOD_COUNT 4u
 //#define BTN_SPRITES 4u
 
-#define MODEL_TYPE 3
-#define ACTOR_COUNT 5
+#define MODEL_TYPE 4
+#define ACTOR_COUNT 1
 //#define MAX_FISH_NO 40
 
 //#define TAU 6.28318530718f
@@ -68,7 +71,8 @@ static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
 
 static actor2d_t *spriteActors[MAX_SPRITES];
 
-
+//struct playerstats {0, 0} pstats;
+// pstats.money = 0;
 
 static int find_free_sprite_actor() {
 
@@ -203,6 +207,13 @@ static void state_init(xm64player_t *xm) {
 }
 
 //static float angle = 0.f;
+
+
+
+
+
+
+
 
 void state_update(float delta, T3DVec3 *dir) {
 
@@ -386,7 +397,8 @@ int main() {
 		t3d_model_load("rom:/mullet.t3dm"), // t1 fish, starting from index 1
 		//t3d_model_load("rom:/fish_quad.t3dm"), // T5 the og fish, the oscar
 		//t3d_model_load("rom:/cube0.t3dm"),
-		t3d_model_load("rom:/kibble_quad.t3dm") // food will be, whatever index this is. 2 atm
+		t3d_model_load("rom:/kibble_quad.t3dm"), // food will be, whatever index this is. 2 atm
+		t3d_model_load("rom:/cursor_bubble.t3dm")
 		
 		
 		
@@ -429,6 +441,8 @@ int main() {
 
 	Actor actors[ACTOR_COUNT];
 
+	bubble_actor_t myBubble = create_bubble_wand(dpls[3]);
+
 
 	for(int j=0; j<ACTOR_COUNT; ++j) {
 		actors[j] = actor_create(j, dpls[j*3 % 2]);
@@ -455,17 +469,19 @@ int main() {
 	}
 
 	//? ====== FISH STUFF ======
-	fishCount = 12;
-	fish_t fish_storage[fishCount];
+	playerstats_t pstats = create_stats(0, 1);
 
-	kibble_t food_storage[3];
+	//pstats.fishCount = 12;
+	fish_t fish_storage[pstats.fishCount];
 
-	for (int k=0; k<3; ++k) {
-		food_storage[k] = food_create(dpls[3*3 %2]);
+	kibble_t food_storage[MAX_FOOD_COUNT];
+
+	for (int k=0; k<MAX_FOOD_COUNT; ++k) {
+		food_storage[k] = food_create(dpls[2]);
 	}
 	
 	uint8_t fishId = 1;
-	for (int fc = 0; fc<fishCount; ++fc ) { 
+	for (int fc = 0; fc<pstats.fishCount; ++fc ) { 
 		fish_storage[fc] = fish_create(fishId, dpls[1*3 % 2], fc);
 	}
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
@@ -510,6 +526,10 @@ int main() {
 	bool can_bpress = true;
 
 	can_switch_gs = true;
+
+	uint8_t next_kibble_id = 0;
+
+
 	for(;;) {
 		//! ======== UPDATE LOOP ========
 
@@ -539,6 +559,16 @@ int main() {
 
 		if(can_bpress && joypad.btn.b) {
 			//contextual menu func
+
+			food_spawn(&food_storage[next_kibble_id], myBubble.actor.pos[1], myBubble.actor.pos[2]);
+
+			if(next_kibble_id < MAX_FOOD_COUNT) {
+				next_kibble_id += 1;
+			} else {
+				next_kibble_id = 0;
+			}
+			
+
 			can_bpress = false;
 		} else if(!joypad.btn.b) {
 			can_bpress = true;
@@ -567,8 +597,8 @@ int main() {
 		if(actorCount < 0)actorCount = 0;
 		if(actorCount > ACTOR_COUNT)actorCount = ACTOR_COUNT;
 
-		if(fishCount < 0) fishCount = 0;
-		if(fishCount > MAX_FISH) fishCount = MAX_FISH;
+		if(pstats.fishCount < 0) pstats.fishCount = 0;
+		if(pstats.fishCount > MAX_FISH) pstats.fishCount = MAX_FISH;
 
 		float newTime = get_time_s();
 		float deltaTime = (newTime - objTimeLast) * baseSpeed;
@@ -591,13 +621,18 @@ int main() {
 			actor_update(&actors[i]);
 		}
 
-		for(int f=0; f<fishCount; ++f) {
-			fish_update(&fish_storage[f], deltaTime);
-		}
+		if(gstate == AQUA) {
+			for(int f=0; f<pstats.fishCount; ++f) {
+				fish_update(&fish_storage[f], deltaTime);
+			}
 
-		for(int k=0;k<3;++k) {
-			food_update(&food_storage[k], deltaTime);
+			for(int k=0;k<MAX_FOOD_COUNT;++k) {
+				food_update(&food_storage[k], deltaTime);
+			}
 		}
+		
+
+		bubble_update(&myBubble, joypad);
 
 		update_sprite_actors(joypad);
 		// Gamestate check?
@@ -643,13 +678,16 @@ int main() {
 			actor_draw(&actors[i]);
 		}
 
+		bubble_draw(&myBubble);
+
 		if( gstate == AQUA) {
-			for(int f=0;f<fishCount; ++f) {
-				fish_draw(&fish_storage[f]);
-			}
-			for(int k=0;k<3;++k) {
+			for(int k=0;k<MAX_FOOD_COUNT;++k) {
 				food_draw(&food_storage[k]);
 			}
+			for(int f=0;f<pstats.fishCount; ++f) {
+				fish_draw(&fish_storage[f]);
+			}
+			
 		} //else if (gstate == SHOP)
 		//{
 			/* code */
@@ -720,7 +758,7 @@ int main() {
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 210*2, "Update   : %.2fms", timeUpdate);
 		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 220*2, "FPS      : %.2f", display_get_fps());
 
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "fish pos : %.2f, %.2f, %.2f", actors[1].pos[0], actors[1].pos[1], actors[1].pos[2]); kinda pointless now
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 32*2, "a press: %d inbounds?: %d", isa_justpress, inbounds);

@@ -1,7 +1,10 @@
 #include "actor2d.h"
 
+//#include "../actor.h"
+
 typedef struct pointer_actor_s {
 	actor2d_t actor;
+	//Actor ractor;
 	float spawn_x;
 	float spawn_y;
 	float radius;
@@ -19,7 +22,7 @@ static void init(actor2d_t *actor) {
 static bool update(actor2d_t *actor, joypad_inputs_t pad) {
 	pointer_actor_t *this = (pointer_actor_t *)actor;
 
-	const float speed = 0.1f; // more like sensitivity but im lazy now
+	const float speed = 0.2f; // more like sensitivity but im lazy now
 
 	
 	// FOOD AND SELECT?

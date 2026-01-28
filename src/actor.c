@@ -5,12 +5,12 @@ static int frameIdx = 0;
 Actor actor_create(uint32_t id, rspq_block_t *dpl) {
 	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
 	float posx = 0, posy = 0, posz = 0;
-	if (id == 1) {
+	//if (id == 1) {
 		// fish quad test?
-		posx = -10.f;
-		posy=10.f;
-		posz=5.f;
-	} 
+	// 	posx = -10.f;
+	// 	posy=10.f;
+	// 	posz=5.f;
+	// } 
 	// else if(id == 1){
 	// 	posz=-10.f;
 	// }
