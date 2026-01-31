@@ -9,7 +9,7 @@
 static int frameIdx;
 
 typedef struct {
-	uint32_t id;
+	uint8_t id;
 	float pos[3];
 	float rot[3];
 	float scale[3];

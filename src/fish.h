@@ -4,6 +4,7 @@
 //#include "actor2d.h"
 //#include <stdlib.h>
 #include "actor.h"
+#include "kibble.h"
 #include <stdbool.h>
 
 #define MAX_FISH 255U
@@ -23,22 +24,31 @@ typedef struct fish_s {
 	// no actor2d fuck it
 	//float zdepth;
 	uint8_t variant;
+	//uint16_t pseed;
 	//hunger?
 	bool isMature;
 	bool isMerging;
 
+	T3DVec3 direction;
+
 	bool fishLeft;
 	bool isDead;
+	bool active;
 
 	FishState_t fstate;
 
-	uint64_t lifetime;
-	uint64_t starvetime;
+	uint32_t lifetime;
+	uint32_t starvetime;
 
 } fish_t;
 
+//int find_free_fish(fish_t *fisharray);
+void fish_append(fish_t *fishes);
+void fish_cull(fish_t *fishies);
+
+
 fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index);
-void fish_update(fish_t *fish, float delta);
+void fish_update(fish_t *fish, float delta, kibble_t *food_storage);
 void fish_draw(fish_t *fish);
 void fish_delete(fish_t *fish);
 

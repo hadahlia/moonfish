@@ -14,6 +14,7 @@ static void init(actor2d_t *actor) {
 	pointer_actor_t *this = (pointer_actor_t *)actor;
 	this->spawn_x = actor->x;
 	this->spawn_y = actor->y;
+	this->actor.x_scale = this->actor.y_scale = 0.5f;
 
 	//setup for slurping coins and stuff?
 	this->radius = 8.0f;
@@ -22,7 +23,7 @@ static void init(actor2d_t *actor) {
 static bool update(actor2d_t *actor, joypad_inputs_t pad) {
 	pointer_actor_t *this = (pointer_actor_t *)actor;
 
-	const float speed = 0.2f; // more like sensitivity but im lazy now
+	const float speed = 0.1f; // more like sensitivity but im lazy now
 
 	
 	// FOOD AND SELECT?
@@ -32,15 +33,15 @@ static bool update(actor2d_t *actor, joypad_inputs_t pad) {
 	this->actor.y -= pad.stick_y * speed;
 
 	//? clamp positions
-	if (this->actor.x + 32.f > 640.f) {
-		this->actor.x = 640.f - 32.f;
+	if (this->actor.x + 32.f/2.f > 640.f/2.f) {
+		this->actor.x = 640.f/2.f - 32.f/2.f;
 	} else if (this->actor.x < 0.f) {
 		this->actor.x = 0.f;
 	}
 	
 
-	if (this->actor.y + 32.f > 480.f) {
-		this->actor.y = 480.f - 32.f;
+	if (this->actor.y + 32.f/2.f > 480.f/2.f) {
+		this->actor.y = 480.f/2.f - 32.f/2.f;
 	} else if (this->actor.y < 0.f) {
 		this->actor.y = 0.f;
 	}

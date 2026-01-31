@@ -16,10 +16,10 @@
 #define SHOP_BTN_NO 2u
 #define GUI_THING_NO 2u
 
-#define MAX_FOOD_COUNT 4u
+#define MAX_FOOD_COUNT 3u
 //#define BTN_SPRITES 4u
 
-#define MODEL_TYPE 4
+#define MODEL_TYPE 5
 #define ACTOR_COUNT 1
 //#define MAX_FISH_NO 40
 
@@ -71,6 +71,7 @@ static actor2d_info_t actor2d_info[MAX_SPRITE_TYPES] = {
 
 static actor2d_t *spriteActors[MAX_SPRITES];
 
+static fish_t fish_storage[MAX_FISH];
 //struct playerstats {0, 0} pstats;
 // pstats.money = 0;
 
@@ -156,10 +157,10 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 
 static void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds) {
 	if(!texbtn->visible) return;
-	float upper_x = texbtn->x + texbtn->width;
-	float lower_x = texbtn->x - texbtn->width;
-	float upper_y = texbtn->y + texbtn->height;
-	float lower_y = texbtn->y - texbtn->height;
+	float upper_x = texbtn->x + texbtn->width/2;
+	float lower_x = texbtn->x - texbtn->width/2;
+	float upper_y = texbtn->y + texbtn->height/2;
+	float lower_y = texbtn->y - texbtn->height/2;
 	if(spr_actor->y < upper_y && spr_actor->y > lower_y) {
 		//you within the button y
 		if(spr_actor->x < upper_x && spr_actor->x > lower_x) {
@@ -289,6 +290,10 @@ void on_switch_end(int ovfl) {
 	// console_render();
 }
 
+void on_culltime_end(int ovfl) {
+	fish_cull(fish_storage);
+}
+
 // void timer_func() {
 	
 // }
@@ -376,7 +381,7 @@ int main() {
 
 	dfs_init(DFS_DEFAULT_LOCATION);
 
-	display_init(RESOLUTION_640x480, DEPTH_16_BPP, FB_COUNT, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
+	display_init(RESOLUTION_320x240, DEPTH_16_BPP, FB_COUNT, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
 
 	display_set_fps_limit(30.f);
 
@@ -398,7 +403,8 @@ int main() {
 		//t3d_model_load("rom:/fish_quad.t3dm"), // T5 the og fish, the oscar
 		//t3d_model_load("rom:/cube0.t3dm"),
 		t3d_model_load("rom:/kibble_quad.t3dm"), // food will be, whatever index this is. 2 atm
-		t3d_model_load("rom:/cursor_bubble.t3dm")
+		t3d_model_load("rom:/cursor_bubble.t3dm"),
+		t3d_model_load("rom:/coinmesh.t3dm")
 		
 		
 		
@@ -454,9 +460,9 @@ int main() {
 
 	for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
 
-		float target_x = 320/2.0f;
-		float tmpscalar = i * (640/4.0f);
-		float target_y = 250.f;
+		float target_x = 160/2.0f;
+		float tmpscalar = i * (320/4.0f);
+		float target_y = 250.f*0.5f;
 		target_x += tmpscalar;
 
 		shopButtons[i] = new_tex_button(button_textures[0], target_x, target_y, 2.0f, 32.f, 32.f, "BOOO", 0.f, 0.f);
@@ -465,14 +471,22 @@ int main() {
 	for(uint8_t g = 0;g<GUI_THING_NO;++g) {
 		// set arg struct array?
 		float uh = g * 32.f;
-		guiThings[g] = new_gui_thing( gui_sprites[g] ,480 + uh, 25, 1.0f, "SCORE", 40, 0);
+		char *text;
+		if(g == 0) {
+			text = "SCORE";
+		} else {
+			text = "";
+		}
+		guiThings[g] = new_gui_thing( gui_sprites[g] ,480/2 + uh, 25, 1.0f, text, 40/2, 0);
 	}
 
 	//? ====== FISH STUFF ======
-	playerstats_t pstats = create_stats(0, 1);
+	playerstats_t pstats = create_stats(0, 15);
+
+	playerstats_t *p1 = &pstats;
 
 	//pstats.fishCount = 12;
-	fish_t fish_storage[pstats.fishCount];
+	
 
 	kibble_t food_storage[MAX_FOOD_COUNT];
 
@@ -481,7 +495,7 @@ int main() {
 	}
 	
 	uint8_t fishId = 1;
-	for (int fc = 0; fc<pstats.fishCount; ++fc ) { 
+	for (int fc = 0; fc<p1->fishCount; ++fc ) { 
 		fish_storage[fc] = fish_create(fishId, dpls[1*3 % 2], fc);
 	}
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
@@ -506,7 +520,12 @@ int main() {
 
 	timer_link_t *switch_delay;
 	//timer_link_t *just_pressed_time;
+
+	timer_link_t *cull_loop;
 	
+	
+	//cull_loop = //new_timer_context(TIMER_TICKS(6000000), TF_CONTINUOUS, fish_cull, fish_storage);
+	cull_loop = new_timer(TIMER_TICKS(6000000), TF_CONTINUOUS, on_culltime_end);
 
 	state_init(&xm);
 
@@ -560,13 +579,15 @@ int main() {
 		if(can_bpress && joypad.btn.b) {
 			//contextual menu func
 
-			food_spawn(&food_storage[next_kibble_id], myBubble.actor.pos[1], myBubble.actor.pos[2]);
-
-			if(next_kibble_id < MAX_FOOD_COUNT) {
+			if(next_kibble_id < (MAX_FOOD_COUNT-1)) {
 				next_kibble_id += 1;
 			} else {
-				next_kibble_id = 0;
+				next_kibble_id = 1;
 			}
+
+			food_spawn(&food_storage[next_kibble_id], myBubble.actor.pos[1], myBubble.actor.pos[2]);
+
+			
 			
 
 			can_bpress = false;
@@ -597,8 +618,8 @@ int main() {
 		if(actorCount < 0)actorCount = 0;
 		if(actorCount > ACTOR_COUNT)actorCount = ACTOR_COUNT;
 
-		if(pstats.fishCount < 0) pstats.fishCount = 0;
-		if(pstats.fishCount > MAX_FISH) pstats.fishCount = MAX_FISH;
+		if(p1->fishCount < 0) p1->fishCount = 0;
+		if(p1->fishCount > MAX_FISH) p1->fishCount = MAX_FISH;
 
 		float newTime = get_time_s();
 		float deltaTime = (newTime - objTimeLast) * baseSpeed;
@@ -622,8 +643,32 @@ int main() {
 		}
 
 		if(gstate == AQUA) {
-			for(int f=0; f<pstats.fishCount; ++f) {
-				fish_update(&fish_storage[f], deltaTime);
+			for(int f=0; f<p1->fishCount; ++f) {
+
+				// float a0 = food_storage[0].actor.pos[1] - fish_storage[f].actor.pos[1];
+				// float a1 = food_storage[0].actor.pos[2] - fish_storage[f].actor.pos[2];
+
+				// float b1 = food_storage[1].actor.pos[1] - fish_storage[f].actor.pos[1];
+				// float b2 = food_storage[1].actor.pos[2] - fish_storage[f].actor.pos[2];
+
+				// float c1= food_storage[2].actor.pos[1] - fish_storage[f].actor.pos[1];
+				// float c2= food_storage[2].actor.pos[2] - fish_storage[f].actor.pos[2];
+
+				// if (a0 < b1) {
+				// 	if(a0 < c1) {
+				// 		//a0 is shortest
+				// 	} else {
+				// 		//c1 is shortest
+				// 	}
+				// } else if(c1 < b1) {
+				// 	//c1 is shortest
+				// } else {
+				// 	//b1 is shortest
+				// }
+
+				
+
+				fish_update(&fish_storage[f], deltaTime, food_storage);
 			}
 
 			for(int k=0;k<MAX_FOOD_COUNT;++k) {
@@ -684,7 +729,7 @@ int main() {
 			for(int k=0;k<MAX_FOOD_COUNT;++k) {
 				food_draw(&food_storage[k]);
 			}
-			for(int f=0;f<pstats.fishCount; ++f) {
+			for(int f=0;f<p1->fishCount; ++f) {
 				fish_draw(&fish_storage[f]);
 			}
 			
@@ -755,8 +800,8 @@ int main() {
 
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 200*2, "Triangles: %d", totalTris);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 210*2, "Update   : %.2fms", timeUpdate);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 220*2, "FPS      : %.2f", display_get_fps());
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 210, "Update   : %.2fms", timeUpdate);
+		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 220, "FPS      : %.2f", display_get_fps());
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
 

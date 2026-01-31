@@ -7,12 +7,49 @@
 // float prevx = 0, prevy = 0, prevz = 0;
 
 
+static inline int find_free_fish(fish_t *fisharray) {
+
+	for(int i=0; i<MAX_FISH; i++) {
+		if(fisharray[i].active == false) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void fish_append(fish_t *fishes) {
+	int slot = find_free_fish(fishes);
+	if(slot==-1) {
+		return;
+	}
+	//fish_create?
+	//fishes[slot] = 
+
+}
+
+void fish_cull(fish_t *fishies) {
+	int final_id = 0;
+	for(uint8_t i = 0; i<MAX_FISH; ++i) {
+		if(fishies[i].isDead == false) continue;
+		if(fishies[i+1].active == true) {
+			fishies[i] = fishies[i+1];
+		}
+		final_id = i;
+		// for(uint8_t f = i; f<MAX_FISH; ++i) {
+			
+			
+		// }
+		
+	}
+	fishies[final_id].active = false;
+}
 
 
 fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
 	//float basex = -20.f, basey = 15.f, basez = 0;
-	T3DVec3 spawnv = {{-25.f, 10.f, 0.f}};
+	T3DVec3 spawnv = {{-22.f, 10.f, 0.f}};
 
 	// uh whats the idea here. spawn vector, normalized. i take random offset from -1 to 1, multiply it by tank_bounds/2, and multiply that by the normalized spawn vector
 
@@ -25,7 +62,7 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 
 	//srand(getentropy32());
 	//float randOffsetx = (rand() % 100) / 3000.0f + 0.03f;
-	float offsetX = index * 0.1f;
+	float offsetX = index * 0.05f;
 	
 	srand((getentropy32()) + frameIdx);
 	//float randOffsety = (rand() % 100) / 3.0f + 1.13f;
@@ -75,18 +112,23 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 	// 	.modelMat = malloc_uncached(sizeof(T3DMat4FP) * FB_COUNT)
 	// };
 
+	//float 
+
 	fish_t fish = (fish_t){
-		.variant = variant,
+		//.variant = variant,
+		//.pseed = srand(getentropy32),
 		.isMature = false,
 		.isMerging = false,
+		.direction = {{0, 0, 1}},
 		.fishLeft = true,
 		.isDead = false,
+		.active = true,
 		.fstate = REGULAR,
 		.lifetime = 0,
-		.starvetime = 10000,
+		.starvetime = 300,
 		.actor.pos = {posx, posy,posz},
 		.actor.rot = {0,0,0},
-		.actor.scale = {1,1,1},
+		.actor.scale = {0.5,0.5,0.5},
 		.actor.dpl = dpl,
 		.actor.modelMat = malloc_uncached(sizeof(T3DMat4FP) * FB_COUNT)
 	};
@@ -94,33 +136,11 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 	return fish;
 }
 
-void fish_update(fish_t *fish, float delta) {
-	fish->lifetime += 1;
-	if(fish->starvetime > 0) {
-		fish->starvetime -= 1;
-	}
-
-	// if(fish->starvetime < 9000) {
-	// 	fish->isDead = true;
-	// }
-	
-
-	if(fish->fstate == REGULAR) {
-		//? IDLE ESSENTIALLY
-
-		srand(frameIdx);
-		float minoffset = 1.0f * (rand() / 2) / FISH_SPEED + 0.03f;
-		float speedOffset = (2.0f * (rand() % 100) / 100.0f);
-		float speed = FISH_SPEED * speedOffset;
-
-		if (fish->fishLeft) {
-			fish->actor.rot[1] = 0;
-			fish->actor.pos[2] += speed * delta;
-		} else {
-			fish->actor.rot[1] = PI;
-			fish->actor.pos[2] -= speed * delta;
-		}
-
+void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
+	if(fish->active == false) return;
+	if(fish->isDead == true) {
+		fish->actor.rot[0] = PI;
+		fish->actor.pos[1] += delta;
 
 		if (fish->actor.pos[1] > TANK_BOUNDS_Y) {
 			fish->actor.pos[1] = TANK_BOUNDS_Y;
@@ -128,30 +148,269 @@ void fish_update(fish_t *fish, float delta) {
 			fish->actor.pos[1] = 4.f;
 		} 
 
-		if (fish->actor.pos[2] > TANK_BOUNDS_X) {
-			fish->actor.pos[2] = TANK_BOUNDS_X;
-			fish->fishLeft = false;
-		} else if (fish->actor.pos[2] < -TANK_BOUNDS_X) {
-			fish->actor.pos[2] = -TANK_BOUNDS_X;
-			fish->fishLeft = true;
+		t3d_mat4fp_from_srt_euler(&fish->actor.modelMat[frameIdx], fish->actor.scale, fish->actor.rot, fish->actor.pos);
+		return;
+	} 
+
+	
+	if(fish->starvetime > 0) {
+		fish->starvetime -= 1;
+
+		
+	}
+
+	
+	if(fish->starvetime == 0) {
+		fish->isDead = true;
+		return;
+	} else if(fish->starvetime < 150 ) {
+		if(food_storage[0].active == true || food_storage[1].active == true || food_storage[2].active == true) {
+			fish->fstate = HUNGRY;
 		}
+		//fish->isDead = true;
+		
+	} else {
+		fish->lifetime += 1;
+		float scale_coeff = fish->lifetime * 0.001f;
+
+		if(scale_coeff >0.5f) {
+			fish->actor.scale[0] = scale_coeff;
+			fish->actor.scale[1] = scale_coeff;
+			fish->actor.scale[2] = scale_coeff;
+		}
+		
+
+		if(fish->lifetime > 2100) {
+			fish->isMature = true;
+			fish->actor.scale[0] = 2.f;
+			fish->actor.scale[1] = 2.f;
+			fish->actor.scale[2] = 2.f;
+		}
+	}
+	
+	srand(frameIdx);
+	float minoffset = 1.0f * (rand() / 2) / FISH_SPEED + 0.03f;
+	float speedOffset = (2.0f * (rand() % 100) / 100.0f) ;
+	float speed = FISH_SPEED * speedOffset / fish->actor.scale[0];
+
+	if(fish->fstate == REGULAR) {
+		//? IDLE ESSENTIALLY
+
+		
+
+		if (fish->fishLeft) {
+			fish->actor.rot[1] = 0;
+			//t3d_vec3_lerp()
+			fish->actor.pos[2] +=  speed * delta;
+		} else {
+			fish->actor.rot[1] = PI;
+			fish->actor.pos[2] -= speed * delta;
+		}
+
+
+		
+
+		
 	
 	} else if(fish->fstate == HUNGRY) {
+		if(food_storage[0].active == false && food_storage[1].active == false && food_storage[2].active == false) {
+			//welp. regular 
+			fish->fstate = REGULAR;
+			return;
+		}
+
+		T3DVec3 fishpos = {{0,fish->actor.pos[1], fish->actor.pos[2] }};
+
+		
+		T3DVec3 foodpos0 = {{0, 999, 999}};
+		T3DVec3 foodpos1 = {{0, 999, 999}};
+		T3DVec3 foodpos2 = {{0, 999, 999}};
+
+		if (food_storage[0].active == true) {
+			//foodpos0.v = {0, food_storage[0].actor.pos[1], food_storage[0].actor.pos[2]};
+			foodpos0.x = 0;
+			foodpos0.y = food_storage[0].actor.pos[1];
+			foodpos0.z = food_storage[0].actor.pos[2];
+			
+		}
+
+		if (food_storage[1].active == true) {
+			//foodpos1.v = {0, food_storage[1].actor.pos[1], food_storage[1].actor.pos[2]};
+
+			foodpos1.x = 0;
+			foodpos1.y = food_storage[1].actor.pos[1];
+			foodpos1.z = food_storage[1].actor.pos[2];
+		} 
+
+		if (food_storage[2].active == true) {
+			//foodpos2.v = {0, food_storage[2].actor.pos[1], food_storage[2].actor.pos[2]};
+
+			foodpos2.x = 0;
+			foodpos2.y = food_storage[2].actor.pos[1];
+			foodpos2.z = food_storage[2].actor.pos[2];
+		} 
+
+		
+		
+		
+		T3DVec3 ra, rb, rc;
+
+		t3d_vec3_diff(&ra, &foodpos0, &fishpos);
+		t3d_vec3_diff(&rb, &foodpos1, &fishpos);
+		t3d_vec3_diff(&rc, &foodpos2, &fishpos);
+
+		//t3d_vec3
+
+		float lena = t3d_vec3_len(&ra);
+		float lenb = t3d_vec3_len(&rb);
+		float lenc = t3d_vec3_len(&rc);
+		uint8_t id = -1;
+		//float shortest = 0.f;
+		T3DVec3 target = {{0, 0, 0}};
+		if(lena < lenb) {
+			if(lenb < lenc) {
+				//lena smallest
+				//shortest = lena;
+				id = 0;
+				target = foodpos0;
+			} else {
+				//lenc smallest
+				id = 2;
+				//shortest = lenc;
+				target = foodpos2;
+			}
+		} else if (lenb < lenc){
+			//lenb smallest
+			//shortest = lenb;
+			id = 1;
+			target = foodpos1;
+		} else {
+			//lenc smallest
+			//shortest = lenc;
+			id = 2;
+			target = foodpos2;
+		}
+		if(t3d_vec3_distance(&target, &fishpos) > 85.f) {
+			fish->fstate = REGULAR;
+			return;
+		}
+		// if() {
+		// 	fish->fstate = REGULAR;
+		// }
+		
+
+		T3DVec3 direction;
+		t3d_vec3_diff(&direction, &target, &fishpos);
+		
+		if(direction.v[2] > 0 || direction.v[1] > 0) {
+			t3d_vec3_norm(&direction);
+		}
+		
+
+		//? do stuff to direction?
+
+		//t3d_vec3_mul()
+		//float rngdir = (2.0f * (rand() % 100) / 100.0f)
+
+		fish->actor.pos[1] += direction.y * FISH_SPEED * delta;
+		fish->actor.pos[2] += direction.z * FISH_SPEED * delta;
+		//T3DVec3 up = {{0, 1, 0}};
+
+		//T3DMat4 *mat = malloc_uncached(sizeof(T3DMat4) * FB_COUNT);
+		//t3d_mat4_identity(mat);
+
+		if(t3d_vec3_distance(&target, &fishpos) < 1.f) {
+
+			food_storage[id].active=false;
+			fish->starvetime = 500;
+			fish->actor.scale[0] += 0.1f;
+			fish->actor.scale[1] += 0.1f;
+			fish->actor.scale[2] += 0.1f;
+			fish->fstate = REGULAR;
+			return;
+		}
+
+		//t3d_mat4_from_srt_euler(mat,  fish->actor.scale, fish->actor.rot, fish->actor.pos);
+
+		//t3d_mat4fp_from_srt_euler(&fish->actor.modelMat[frameIdx], fish->actor.scale, fish->actor.rot, fish->actor.pos);
+		// t3d_mat4_look_at(mat, &fishpos, &target, &up);
+
+		// t3d_mat4_to_fixed(&fish->actor.modelMat[frameIdx], mat);
+
+		
+
+		//t3d_mat4
+		// kibble_t *food = &food_storage[0];
+		// for(int k=1; k<3; k++) {
+		// 	if(food_storage[k].active) {
+		// 		kibble_t *food = &food_storage[k];
+		// 	}
+			
+		// }
+		
+		// if(!food->active) fish->fstate = REGULAR;
+
+		// float direction_y = food->actor.pos[1] - fish->actor.pos[1];
+		// float direction_z = food->actor.pos[2] - fish->actor.pos[2];
+
+		// //t3d_vec3_norm()
+
+		// if(direction_y > 1) {
+		// 	direction_y = 1;
+		// } else {
+		// 	direction_y = 0;
+		// }
+		// if(direction_z > 1) {
+		// 	direction_z = 1;
+		// } else {
+		// 	direction_z = 0;
+		// }
+
+		// if (direction_y != 0) {
+		// 	fish->actor.pos[1] += direction_y * FISH_SPEED * delta;
+		// }
+
+		// if (direction_z != 0) {
+		// 	fish->actor.pos[2] += direction_z * FISH_SPEED * delta;
+		// }
+
+		// if (direction_y && direction_z < 0.1f ) {
+		// 	// eat da food
+		// 	food->active=false;
+		// 	fish->starvetime = 2000;
+		// 	fish->fstate = REGULAR;
+		// }
+
 
 	} else if(fish->fstate == SMOOCH) {
 		//? MERGING STATE
 	}
 
 	
-	
+	if (fish->actor.pos[1] > TANK_BOUNDS_Y) {
+		fish->actor.pos[1] = TANK_BOUNDS_Y;
+	} else if (fish->actor.pos[1] < 4.f) {
+		fish->actor.pos[1] = 4.f;
+	} 
+
+	if (fish->actor.pos[2] > TANK_BOUNDS_X) {
+		fish->actor.pos[2] = TANK_BOUNDS_X;
+		fish->fishLeft = false;
+	} else if (fish->actor.pos[2] < -TANK_BOUNDS_X) {
+		fish->actor.pos[2] = -TANK_BOUNDS_X;
+		fish->fishLeft = true;
+	}
 
 	t3d_mat4fp_from_srt_euler(&fish->actor.modelMat[frameIdx], fish->actor.scale, fish->actor.rot, fish->actor.pos);
 
 	//return;
 }
 
+
+
 void fish_draw(fish_t *fish) {
-	if(fish->isDead == true) { return; }
+	//if(fish->isDead == true) { return; }
+	if(fish->active == false) return;
 	t3d_matrix_set(&fish->actor.modelMat[frameIdx], true);
 	rspq_block_run(fish->actor.dpl);
 }

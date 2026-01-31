@@ -1,8 +1,9 @@
 #ifndef __KIBBLE_H
 #define __KIBBLE_H
 
-#include "actor.h"
 #include <stdbool.h>
+#include "actor.h"
+
 
 typedef struct kibble_s {
 	Actor actor;
