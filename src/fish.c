@@ -1,5 +1,6 @@
 #include "fish.h"
 
+
 //static bool fishright = true;
 
 
@@ -18,23 +19,28 @@ static inline int find_free_fish(fish_t *fisharray) {
 	return -1;
 }
 
-void fish_append(fish_t *fishes) {
+void fish_append(fish_t *fishes, rspq_block_t *dpl, playerstats_t *p1) {
 	int slot = find_free_fish(fishes);
-	if(slot==-1) {
-		return;
-	}
+	//int slot = p1->fishCount;
+	// if(slot==-1) {
+	// 	return;
+	// }
 	//fish_create?
-	//fishes[slot] = 
+	fishes[slot] = fish_create(0, dpl, slot, true);
 
+	//p1->fishCount +=1;
+	p1->fishCount = slot;
 }
 
 void fish_cull(fish_t *fishies) {
 	int final_id = 0;
 	for(uint8_t i = 0; i<MAX_FISH; ++i) {
 		if(fishies[i].isDead == false) continue;
-		if(fishies[i+1].active == true) {
-			fishies[i] = fishies[i+1];
-		}
+		//if(fishies[i+1].active == true) {
+			//fishies[i] = fishies[i+1];
+		
+		//}
+		fishies[i].active = false;
 		final_id = i;
 		// for(uint8_t f = i; f<MAX_FISH; ++i) {
 			
@@ -42,11 +48,11 @@ void fish_cull(fish_t *fishies) {
 		// }
 		
 	}
-	fishies[final_id].active = false;
+	//if(final_id > 0 && fishies[final_id].active == true) fishies[final_id].active = false;
 }
 
 
-fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
+fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index, bool active) {
 	//float randScale = (rand() % 100) / 3000.0f + 0.03f;
 	//float basex = -20.f, basey = 15.f, basez = 0;
 	T3DVec3 spawnv = {{-22.f, 10.f, 0.f}};
@@ -122,7 +128,7 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index) {
 		.direction = {{0, 0, 1}},
 		.fishLeft = true,
 		.isDead = false,
-		.active = true,
+		.active = active,
 		.fstate = REGULAR,
 		.lifetime = 0,
 		.starvetime = 300,

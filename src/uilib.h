@@ -33,6 +33,7 @@ typedef struct gui_element_s {
 
 typedef struct tex_button_s {
 	sprite_t *sprite;
+	int id;
 	float x;
 	float y;
 	float x_scale;
@@ -55,7 +56,7 @@ typedef struct tex_button_s {
 gui_element_t new_gui_thing(sprite_t *sprite, float posx, float posy, float scale, char* text, float text_offs_x, float text_offs_y);
 //gui_update probly
 button_t new_button(float x, float y, float width, float height, char* text);
-tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float scale, float width, float height, char* text, float text_offs_x, float text_offs_y);
+tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float scale, float width, float height, char* text, float text_offs_x, float text_offs_y, int id);
 void draw_tex_button(tex_button_t *texbutt);
 void draw_gui_thing(gui_element_t *guithing);
 

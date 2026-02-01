@@ -6,10 +6,10 @@
 #include <stdint.h>
 
 typedef struct playerstats_s {
-	int64_t money;
+	int money;
 	int fishCount;
 } playerstats_t;
 
-playerstats_t create_stats(int64_t money, int fishCount);
+playerstats_t create_stats(int money, int fishCount);
 
 #endif

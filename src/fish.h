@@ -3,6 +3,7 @@
 
 //#include "actor2d.h"
 //#include <stdlib.h>
+#include "global.h"
 #include "actor.h"
 #include "kibble.h"
 #include <stdbool.h>
@@ -43,11 +44,11 @@ typedef struct fish_s {
 } fish_t;
 
 //int find_free_fish(fish_t *fisharray);
-void fish_append(fish_t *fishes);
+void fish_append(fish_t *fishes, rspq_block_t *dpl, playerstats_t *p1);
 void fish_cull(fish_t *fishies);
 
 
-fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index);
+fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index, bool active);
 void fish_update(fish_t *fish, float delta, kibble_t *food_storage);
 void fish_draw(fish_t *fish);
 void fish_delete(fish_t *fish);

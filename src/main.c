@@ -13,17 +13,22 @@
 
 //#include "util.h"
 
-#define SHOP_BTN_NO 2u
+#define SHOP_BTN_NO 1u
 #define GUI_THING_NO 2u
 
 #define MAX_FOOD_COUNT 3u
+
 //#define BTN_SPRITES 4u
 
-#define MODEL_TYPE 5
+#define MODEL_TYPE 13
 #define ACTOR_COUNT 1
 //#define MAX_FISH_NO 40
 
 //#define TAU 6.28318530718f
+
+// lol
+#define KIBBLE_ID 10
+#define BUBBLE_ID 11
 
 static float objTimeLast = 0.f;
 static float objTime = 0.f;
@@ -155,7 +160,7 @@ static void update_sprite_actors(joypad_inputs_t pad) {
 
 // }
 
-static void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds) {
+static void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds, rspq_block_t *dpl, playerstats_t *p1, fish_t *fishes) {
 	if(!texbtn->visible) return;
 	float upper_x = texbtn->x + texbtn->width/2;
 	float lower_x = texbtn->x - texbtn->width/2;
@@ -165,8 +170,26 @@ static void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds
 		//you within the button y
 		if(spr_actor->x < upper_x && spr_actor->x > lower_x) {
 			//you ALSO within button x. YAY
-			texbtn->visible = false;
+			//texbtn->visible = false;
+			//! play the sound
 			*inbounds = true;
+
+			switch(texbtn->id){
+				case 0: // MULLET PURCHASE
+					//fish_create(0, dpl, p1->fishCount);
+					fish_append(fishes, dpl, p1);
+					break;
+				//case 1: // SUNFISH PURCHASE
+				//case 2:
+				//case 3:
+				//case 4:
+			//	case 5:
+				//case 6:
+				//case 7:
+				//case 8:
+				//case 9:
+				//case 10:
+			}
 		}
 
 	}
@@ -358,6 +381,12 @@ void state_switch(int16_t new_state, timer_link_t *sd, xm64player_t *xm, wav64_t
 float get_time_s() { return (float)((double)get_ticks_ms() / 1000.0); }
 float get_time_ms() { return (float)((double)get_ticks_us() / 1000.0); }
 
+void update_score(gui_element_t *element, int score) {
+	char *str = "";
+	itoa(score, str, 10);
+	element->text = str;
+}
+
 [[noreturn]]
 int main() {
 
@@ -396,23 +425,33 @@ int main() {
 	rdpq_text_register_font(FONT_BUILTIN_DEBUG_MONO, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_MONO));
 
 	rspq_block_t *dpls[MODEL_TYPE];
+
+	//rspq_block_t *dplptr = &dpls;
+
 	T3DModel *models[MODEL_TYPE] = {
 		//load models here
 		t3d_model_load("rom:/room_05.t3dm"),	// INDEX 0 is gonna be the room, dont make actor from it? unknown
 		t3d_model_load("rom:/mullet.t3dm"), // t1 fish, starting from index 1
-		//t3d_model_load("rom:/fish_quad.t3dm"), // T5 the og fish, the oscar
+		t3d_model_load("rom:/fish2_sunfish.t3dm"), //t2 SUNFISH
+		t3d_model_load("rom:/fish3_betta.t3dm"), //t3 BETTA
+		t3d_model_load("rom:/fish4_tang.t3dm"), //T4 TANG
+		t3d_model_load("rom:/fish_quad.t3dm"), // T5 the og fish, the oscar
+		t3d_model_load("rom:/fish6_salmon.t3dm"), //T6 SALMON
+		t3d_model_load("rom:/fish7_gar.t3dm"), //T7 GAR
+		t3d_model_load("rom:/fish8_clownfish.t3dm"), //T8 CLOWNFISH
+		t3d_model_load("rom:/fish9_eviltoad.t3dm"), //T9 EVILLL
 		//t3d_model_load("rom:/cube0.t3dm"),
-		t3d_model_load("rom:/kibble_quad.t3dm"), // food will be, whatever index this is. 2 atm
-		t3d_model_load("rom:/cursor_bubble.t3dm"),
-		t3d_model_load("rom:/coinmesh.t3dm")
+		t3d_model_load("rom:/kibble_quad.t3dm"), // food will be, whatever index this is. 10 atm
+		t3d_model_load("rom:/cursor_bubble.t3dm"), // 11
+		t3d_model_load("rom:/coinmesh.t3dm") // 12
 		
 		
 		
 	};
 
 	sprite_t *button_textures[SHOP_BTN_NO] = {
-		sprite_load("rom:/dark.ci8.sprite"), // 0: debug black(ish) square
-		sprite_load("rom:/hand.ci8.sprite") // 1: again, test
+		sprite_load("rom:/dark.ci8.sprite") // 0: debug black(ish) square
+		//sprite_load("rom:/hand.ci8.sprite") // 1: again, test
 	};
 
 	sprite_t *gui_sprites[GUI_THING_NO] = {
@@ -447,10 +486,10 @@ int main() {
 
 	Actor actors[ACTOR_COUNT];
 
-	bubble_actor_t myBubble = create_bubble_wand(dpls[3]);
+	bubble_actor_t myBubble = create_bubble_wand(dpls[BUBBLE_ID]);
 
-
-	for(int j=0; j<ACTOR_COUNT; ++j) {
+	//ACTOR_COUNT
+	for(int j=0; j<1; ++j) {
 		actors[j] = actor_create(j, dpls[j*3 % 2]);
 	}
 
@@ -465,7 +504,7 @@ int main() {
 		float target_y = 250.f*0.5f;
 		target_x += tmpscalar;
 
-		shopButtons[i] = new_tex_button(button_textures[0], target_x, target_y, 2.0f, 32.f, 32.f, "BOOO", 0.f, 0.f);
+		shopButtons[i] = new_tex_button(button_textures[0], target_x, target_y, 0.8f, 32.f, 32.f, "BOOO", 0.f, 0.f, i);
 	}
 
 	for(uint8_t g = 0;g<GUI_THING_NO;++g) {
@@ -477,11 +516,11 @@ int main() {
 		} else {
 			text = "";
 		}
-		guiThings[g] = new_gui_thing( gui_sprites[g] ,480/2 + uh, 25, 1.0f, text, 40/2, 0);
+		guiThings[g] = new_gui_thing( gui_sprites[g] ,480/2 + uh, 25, 0.87f, text, 40/2, 0);
 	}
 
 	//? ====== FISH STUFF ======
-	playerstats_t pstats = create_stats(0, 15);
+	playerstats_t pstats = create_stats(45, 1);
 
 	playerstats_t *p1 = &pstats;
 
@@ -491,12 +530,17 @@ int main() {
 	kibble_t food_storage[MAX_FOOD_COUNT];
 
 	for (int k=0; k<MAX_FOOD_COUNT; ++k) {
-		food_storage[k] = food_create(dpls[2]);
+		food_storage[k] = food_create(dpls[KIBBLE_ID]);
 	}
 	
 	uint8_t fishId = 1;
-	for (int fc = 0; fc<p1->fishCount; ++fc ) { 
-		fish_storage[fc] = fish_create(fishId, dpls[1*3 % 2], fc);
+	for (int fc = 0; fc<MAX_FISH; ++fc ) {
+		if(fc > p1->fishCount) {
+			fish_storage[fc] = fish_create(fishId, dpls[1*3 % 2], fc, false);
+		} else {
+			fish_storage[fc] = fish_create(fishId, dpls[1*3 % 2], fc, true);
+		}
+		
 	}
 	// i cant tell if i intend to have fish just be actors? or a new fish type with more, eg starve timer
 
@@ -547,7 +591,7 @@ int main() {
 	can_switch_gs = true;
 
 	uint8_t next_kibble_id = 0;
-
+	//uint8_t active_kibble = 0;
 
 	for(;;) {
 		//! ======== UPDATE LOOP ========
@@ -585,7 +629,12 @@ int main() {
 				next_kibble_id = 1;
 			}
 
-			food_spawn(&food_storage[next_kibble_id], myBubble.actor.pos[1], myBubble.actor.pos[2]);
+			if(p1->money >= 5) {
+				food_spawn(&food_storage[next_kibble_id], myBubble.actor.pos[1], myBubble.actor.pos[2]);
+				
+				p1->money -= 5;
+			}
+			
 
 			
 			
@@ -598,7 +647,7 @@ int main() {
 		if(can_apress && joypad.btn.a) {
 			//isa_justpress = true;
 			for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
-				btn_input(&shopButtons[i], spriteActors[0], bounds_ptr);
+				btn_input(&shopButtons[i], spriteActors[0], bounds_ptr, dpls[i+1], p1, fish_storage);
 				
 			}
 			can_apress = false;
@@ -641,6 +690,8 @@ int main() {
 		for(int i=0; i<ACTOR_COUNT; ++i) {
 			actor_update(&actors[i]);
 		}
+
+		update_score(&guiThings[0], p1->money);
 
 		if(gstate == AQUA) {
 			for(int f=0; f<p1->fishCount; ++f) {

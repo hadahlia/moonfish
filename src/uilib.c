@@ -26,7 +26,7 @@ gui_element_t new_gui_thing(sprite_t *sprite, float posx, float posy, float scal
 	return gui;
 }
 
-tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float scale, float width, float height, char* text, float text_offs_x, float text_offs_y) {
+tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float scale, float width, float height, char* text, float text_offs_x, float text_offs_y, int id) {
 	// tex_button_t this;
 
 	// this.sprite = sprite;
@@ -43,6 +43,7 @@ tex_button_t new_tex_button(sprite_t *sprite, float x, float y, float scale, flo
 
 	tex_button_t button = (tex_button_t){
 		.sprite = sprite,
+		.id = id,
 		.x = x, .y = y, 
 		.x_scale = scale, .y_scale = scale,
 		.width = width * scale,
