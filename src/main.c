@@ -10,11 +10,13 @@
 #include "overlays/actor2d.h"
 #include "uilib.h"
 #include "bubble.h"
+#include "coin.h"
+#include "sound_player.h"
 
 //#include "util.h"
 
-#define SHOP_BTN_NO 1u
-#define GUI_THING_NO 2u
+#define SHOP_BTN_NO 9u
+#define GUI_THING_NO 1u
 
 #define MAX_FOOD_COUNT 3u
 
@@ -29,6 +31,7 @@
 // lol
 #define KIBBLE_ID 10
 #define BUBBLE_ID 11
+#define COIN_ID 12
 
 static float objTimeLast = 0.f;
 static float objTime = 0.f;
@@ -177,17 +180,35 @@ static void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds
 			switch(texbtn->id){
 				case 0: // MULLET PURCHASE
 					//fish_create(0, dpl, p1->fishCount);
-					fish_append(fishes, dpl, p1);
+					fish_append(fishes, dpl, p1, 1);
 					break;
-				//case 1: // SUNFISH PURCHASE
-				//case 2:
-				//case 3:
-				//case 4:
-			//	case 5:
-				//case 6:
-				//case 7:
-				//case 8:
-				//case 9:
+				case 1: // SUNFISH PURCHASE
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 2:
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 3:
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 4:
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 5:
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 6:
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 7:
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 8:
+					fish_append(fishes, dpl, p1, 1);
+					break;
+				case 9:
+					fish_append(fishes, dpl, p1, 1);
+					break;
 				//case 10:
 			}
 		}
@@ -199,6 +220,10 @@ static void btn_input(tex_button_t *texbtn, actor2d_t *spr_actor, bool *inbounds
 
 // Shouldnt i just, init everything we will need? its all one room...
 static void state_init(xm64player_t *xm) {
+	if(!mixer_ch_playing(5)) {
+		xm64player_open(xm, "rom:/fishwish.xm64");
+		xm64player_play(xm, 5);
+	}
 	switch(gstate) {
 		case 0:
 			//FISH
@@ -220,8 +245,8 @@ static void state_init(xm64player_t *xm) {
 			//if(mixer_ch_playing(0)) xm64player_close(xm);
 
 
-			xm64player_open(xm, "rom:/mountain_ant_steve.xm64");
-			xm64player_play(xm, 2);
+			// xm64player_open(xm, "rom:/mountain_ant_steve.xm64");
+			// xm64player_play(xm, 5);
 			break;
 		case 3:
 			
@@ -321,11 +346,13 @@ void on_culltime_end(int ovfl) {
 	
 // }
 
+
+
 void state_switch(int16_t new_state, timer_link_t *sd, xm64player_t *xm, wav64_t *wav) {
 	//if can switch:
 	if(can_switch_gs == false) return;
 
-	if(mixer_ch_playing(2)) xm64player_close(xm);
+	//if(mixer_ch_playing(5)) xm64player_close(xm);
 	//if(mixer_ch_playing(0)) wav64_close(wav);
 	
 
@@ -403,6 +430,8 @@ int main() {
 	xm64player_t xm;
 
 	wav64_t wav;
+
+	
 	
 
 	
@@ -443,20 +472,29 @@ int main() {
 		//t3d_model_load("rom:/cube0.t3dm"),
 		t3d_model_load("rom:/kibble_quad.t3dm"), // food will be, whatever index this is. 10 atm
 		t3d_model_load("rom:/cursor_bubble.t3dm"), // 11
-		t3d_model_load("rom:/coinmesh.t3dm") // 12
+		t3d_model_load("rom:/coin_mesh.t3dm") // 12
 		
 		
 		
 	};
 
 	sprite_t *button_textures[SHOP_BTN_NO] = {
-		sprite_load("rom:/dark.ci8.sprite") // 0: debug black(ish) square
+		sprite_load("rom:/mullet.ci8.sprite"),
+		sprite_load("rom:/fish2_sunfish.ci8.sprite"),
+		sprite_load("rom:/fish3_betta.ci8.sprite"),
+		sprite_load("rom:/fish4_tang.ci8.sprite"),
+		sprite_load("rom:/buppin.ci8.sprite"),
+		sprite_load("rom:/fish6_salmon.ci8.sprite"),
+		sprite_load("rom:/fish7_gar.ci4.sprite"),
+		sprite_load("rom:/fish8_clownfish.ci8.sprite"),
+		sprite_load("rom:/fish9_oystertoad.ci4.sprite"),
+		//sprite_load("rom:/dark.ci8.sprite") // 0: debug black(ish) square
 		//sprite_load("rom:/hand.ci8.sprite") // 1: again, test
 	};
 
 	sprite_t *gui_sprites[GUI_THING_NO] = {
-		sprite_load("rom:/coin.ci8.sprite"), // coin counter
-		sprite_load("rom:/16x.ci4.sprite")
+		sprite_load("rom:/coin.ci8.sprite") // coin counter
+		//sprite_load("rom:/16x.ci4.sprite")
 	};
 
 	// const char *button_textures[1] = {
@@ -488,6 +526,12 @@ int main() {
 
 	bubble_actor_t myBubble = create_bubble_wand(dpls[BUBBLE_ID]);
 
+
+	//! coins assignment
+	// for(int c = 0; c<MAX_COINS; ++c) {
+	// 	coins[c] = coin_create(dpls[COIN_ID], 0, 0);
+	// }
+
 	//ACTOR_COUNT
 	for(int j=0; j<1; ++j) {
 		actors[j] = actor_create(j, dpls[j*3 % 2]);
@@ -499,12 +543,12 @@ int main() {
 
 	for(uint8_t i = 0; i<SHOP_BTN_NO; ++i) {
 
-		float target_x = 160/2.0f;
-		float tmpscalar = i * (320/4.0f);
-		float target_y = 250.f*0.5f;
+		float target_x = 48/2.0f;
+		float tmpscalar = i * (320/10.0f);
+		float target_y = 160.f*0.5f;
 		target_x += tmpscalar;
 
-		shopButtons[i] = new_tex_button(button_textures[0], target_x, target_y, 0.8f, 32.f, 32.f, "BOOO", 0.f, 0.f, i);
+		shopButtons[i] = new_tex_button(button_textures[i], target_x, target_y, 0.5f, 32.f, 32.f, "text lol", 0.f, 0.f, i);
 	}
 
 	for(uint8_t g = 0;g<GUI_THING_NO;++g) {
@@ -516,11 +560,11 @@ int main() {
 		} else {
 			text = "";
 		}
-		guiThings[g] = new_gui_thing( gui_sprites[g] ,480/2 + uh, 25, 0.87f, text, 40/2, 0);
+		guiThings[g] = new_gui_thing( gui_sprites[g] ,500/2 + uh, 25, 0.87f, text, 40/2, 0);
 	}
 
 	//? ====== FISH STUFF ======
-	playerstats_t pstats = create_stats(45, 1);
+	playerstats_t pstats = create_stats(450, 2);
 
 	playerstats_t *p1 = &pstats;
 
@@ -554,7 +598,7 @@ int main() {
 	uint8_t lightDirColor[4] = {120,120,120, 0xFF};
 	t3d_vec3_norm(&lightDirVec);
 
-	int actorCount = 2;
+	int actorCount = 1;
 
 	//int fishCount = 1;
 
@@ -631,8 +675,11 @@ int main() {
 
 			if(p1->money >= 5) {
 				food_spawn(&food_storage[next_kibble_id], myBubble.actor.pos[1], myBubble.actor.pos[2]);
-				
+				play_sound(&wav, "rom:/food_place_f.wav64", 1);
+				coin_spawn(myBubble.actor.pos[1], myBubble.actor.pos[2]);
 				p1->money -= 5;
+			} else {
+				play_sound(&wav, "rom:/no.wav64", 1);
 			}
 			
 
@@ -717,14 +764,27 @@ int main() {
 				// 	//b1 is shortest
 				// }
 
+				if(fish_storage[f].mergeNow == true) {
+					fish_storage[f].isDead = true;
+					fish_storage[f].active = false;
+					fish_append(fish_storage, dpls[fish_storage[f].variant+1], p1, fish_storage[f].variant+1);
+					
+					
+				}
 				
 
-				fish_update(&fish_storage[f], deltaTime, food_storage);
+				fish_update(&fish_storage[f], deltaTime, food_storage, fish_storage, p1);
+
+				
 			}
 
 			for(int k=0;k<MAX_FOOD_COUNT;++k) {
 				food_update(&food_storage[k], deltaTime);
 			}
+
+			// for(int c=0; c<MAX_COINS; ++c) {
+			// 	coin_update(&coins[c], &myBubble);
+			// }
 		}
 		
 
@@ -774,9 +834,10 @@ int main() {
 			actor_draw(&actors[i]);
 		}
 
-		bubble_draw(&myBubble);
+		
 
 		if( gstate == AQUA) {
+			bubble_draw(&myBubble);
 			for(int k=0;k<MAX_FOOD_COUNT;++k) {
 				food_draw(&food_storage[k]);
 			}
@@ -784,6 +845,9 @@ int main() {
 				fish_draw(&fish_storage[f]);
 			}
 			
+			// for(int c=0; c<MAX_COINS; ++c) {
+			// 	coin_draw(&coins[c]);
+			// }
 		} //else if (gstate == SHOP)
 		//{
 			/* code */

@@ -3,7 +3,7 @@
 
 //static bool fishright = true;
 
-
+wav64_t wavfish;
 
 // float prevx = 0, prevy = 0, prevz = 0;
 
@@ -19,18 +19,40 @@ static inline int find_free_fish(fish_t *fisharray) {
 	return -1;
 }
 
-void fish_append(fish_t *fishes, rspq_block_t *dpl, playerstats_t *p1) {
+void fish_append(fish_t *fishes, rspq_block_t *dpl, playerstats_t *p1, int fishId) {
 	int slot = find_free_fish(fishes);
 	//int slot = p1->fishCount;
 	// if(slot==-1) {
 	// 	return;
 	// }
 	//fish_create?
-	fishes[slot] = fish_create(0, dpl, slot, true);
+	fishes[slot] = fish_create(fishId, dpl, slot, true);
+
+	// fishes[slot] = (fish_t){
+	// 	.variant = fishId,
+	// 	//.pseed = srand(getentropy32),
+	// 	.isMature = false,
+	// 	.isMerging = false,
+	// 	.mergeNow = false,
+	// 	.smoochTarget = -1,
+	// 	.direction = {{0, 0, 1}},
+	// 	.fishLeft = true,
+	// 	.isDead = false,
+	// 	.active = true,
+	// 	.sound_played = false,
+	// 	.fstate = REGULAR,
+	// 	.lifetime = 0,
+	// 	.starvetime = 500,
+	// 	//.actor.pos = {posx, posy,posz},
+	// 	.actor.rot = {0,0,0},
+	// 	.actor.scale = {0.5,0.5,0.5},
+	// 	.actor.dpl = dpl
+	// };
 
 	//p1->fishCount +=1;
-	p1->fishCount = slot;
+	p1->fishCount = slot + 1;
 }
+
 
 void fish_cull(fish_t *fishies) {
 	int final_id = 0;
@@ -41,6 +63,7 @@ void fish_cull(fish_t *fishies) {
 		
 		//}
 		fishies[i].active = false;
+		//fish_delete(&fishies[i]);
 		final_id = i;
 		// for(uint8_t f = i; f<MAX_FISH; ++i) {
 			
@@ -121,17 +144,20 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index, bool activ
 	//float 
 
 	fish_t fish = (fish_t){
-		//.variant = variant,
+		.variant = variant,
 		//.pseed = srand(getentropy32),
 		.isMature = false,
 		.isMerging = false,
+		.mergeNow = false,
+		.smoochTarget = -1,
 		.direction = {{0, 0, 1}},
 		.fishLeft = true,
 		.isDead = false,
 		.active = active,
+		.sound_played = false,
 		.fstate = REGULAR,
 		.lifetime = 0,
-		.starvetime = 300,
+		.starvetime = 500,
 		.actor.pos = {posx, posy,posz},
 		.actor.rot = {0,0,0},
 		.actor.scale = {0.5,0.5,0.5},
@@ -142,11 +168,48 @@ fish_t fish_create(uint8_t variant, rspq_block_t *dpl, uint8_t index, bool activ
 	return fish;
 }
 
-void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
+void fish_smooch(fish_t *fish,fish_t *fishes) {
+
+	int merge1 = -1, merge2 = -1;
+	//todo um
+
+	for(uint8_t i = 0; i<MAX_FISH; ++i) {
+		if(fishes[i].active == true && fishes[i].isMature == true) {
+			//?set that fish smooch target
+			//if(fishies[i].isMerging == true) continue;
+
+			fishes[i].isMerging = true;
+			
+			merge1= i;
+
+			for(uint8_t f = i+1; f<MAX_FISH; ++f) {
+				if(fishes[f].active == true && fishes[f].isMature == true) {
+					//?set the second smooch target yoooo
+					fishes[f].isMerging = true;
+					merge2 = f;
+				}
+			}
+
+			fishes[merge1].smoochTarget = merge2;
+			fishes[merge2].smoochTarget = merge1;
+		}
+	}
+
+	// if(merge1 != -1 && merge2 != -1) {
+		
+	// }
+}
+
+void fish_update(fish_t *fish, float delta, kibble_t *food_storage, fish_t *all_fish, playerstats_t *p1) {
 	if(fish->active == false) return;
 	if(fish->isDead == true) {
 		fish->actor.rot[0] = PI;
 		fish->actor.pos[1] += delta;
+		if(fish->sound_played == false) {
+			play_sound(&wavfish, "rom:/fish_die.wav64", 3);
+			fish->sound_played = true;
+		}
+		
 
 		if (fish->actor.pos[1] > TANK_BOUNDS_Y) {
 			fish->actor.pos[1] = TANK_BOUNDS_Y;
@@ -158,6 +221,9 @@ void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
 		return;
 	} 
 
+	if(fish->isMerging == true) {fish->fstate = SMOOCH;} else if(fish->isMature) {
+		fish_smooch(fish, all_fish);
+	}
 	
 	if(fish->starvetime > 0) {
 		fish->starvetime -= 1;
@@ -168,14 +234,20 @@ void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
 	
 	if(fish->starvetime == 0) {
 		fish->isDead = true;
+		fish->sound_played = false;
 		return;
-	} else if(fish->starvetime < 150 ) {
+	} else if(fish->starvetime < 360 ) {
+		if(fish->sound_played == false) {
+			if(!mixer_ch_playing(2)) play_sound(&wavfish, "rom:/warning.wav64", 3);
+			fish->sound_played = true;
+		}
 		if(food_storage[0].active == true || food_storage[1].active == true || food_storage[2].active == true) {
 			fish->fstate = HUNGRY;
+			
 		}
 		//fish->isDead = true;
 		
-	} else {
+	} else if(fish->isMature == false) {
 		fish->lifetime += 1;
 		float scale_coeff = fish->lifetime * 0.001f;
 
@@ -186,11 +258,16 @@ void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
 		}
 		
 
-		if(fish->lifetime > 2100) {
+		if(fish->lifetime > 1600) {
 			fish->isMature = true;
-			fish->actor.scale[0] = 2.f;
-			fish->actor.scale[1] = 2.f;
-			fish->actor.scale[2] = 2.f;
+			fish->actor.scale[0] = 1.8f;
+			fish->actor.scale[1] = 1.8f;
+			fish->actor.scale[2] = 1.8f;
+
+			// coin_spawn(fish->actor.pos[1], fish->actor.pos[2]);
+			// coin_spawn(fish->actor.pos[1] + 1, fish->actor.pos[2] + 1);
+
+			p1->money += 50;
 		}
 	}
 	
@@ -199,17 +276,23 @@ void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
 	float speedOffset = (2.0f * (rand() % 100) / 100.0f) ;
 	float speed = FISH_SPEED * speedOffset / fish->actor.scale[0];
 
+	if (fish->fishLeft) {
+		fish->actor.rot[1] = 0;
+	} else {
+		fish->actor.rot[1] = PI;
+	}
+
 	if(fish->fstate == REGULAR) {
 		//? IDLE ESSENTIALLY
 
 		
 
 		if (fish->fishLeft) {
-			fish->actor.rot[1] = 0;
+			//fish->actor.rot[1] = 0;
 			//t3d_vec3_lerp()
 			fish->actor.pos[2] +=  speed * delta;
 		} else {
-			fish->actor.rot[1] = PI;
+			
 			fish->actor.pos[2] -= speed * delta;
 		}
 
@@ -318,6 +401,12 @@ void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
 		//t3d_vec3_mul()
 		//float rngdir = (2.0f * (rand() % 100) / 100.0f)
 
+		if(direction.z < 0) {
+			fish->fishLeft = false;
+		} else {
+			fish->fishLeft = true;
+		}
+
 		fish->actor.pos[1] += direction.y * FISH_SPEED * delta;
 		fish->actor.pos[2] += direction.z * FISH_SPEED * delta;
 		//T3DVec3 up = {{0, 1, 0}};
@@ -333,6 +422,10 @@ void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
 			fish->actor.scale[1] += 0.1f;
 			fish->actor.scale[2] += 0.1f;
 			fish->fstate = REGULAR;
+			fish->sound_played = false;
+
+			//coin_spawn(fish->actor.pos[1], fish->actor.pos[2]);
+			p1->money += 25;
 			return;
 		}
 
@@ -390,6 +483,39 @@ void fish_update(fish_t *fish, float delta, kibble_t *food_storage) {
 
 	} else if(fish->fstate == SMOOCH) {
 		//? MERGING STATE
+
+		if(fish->smoochTarget == -1) return;
+		// for(uint8_t f=0; f<MAX_FISH; ++f) {
+		// 	if(all_fish[f].isMerging == true) {
+
+		// 	}
+
+		// }
+
+		//? find a second fish merging, and go to them
+		T3DVec3 myPos = {{0, fish->actor.pos[1], fish->actor.pos[2]}};
+		T3DVec3 target = {{0, all_fish[fish->smoochTarget].actor.pos[1], all_fish[fish->smoochTarget].actor.pos[2]}};
+
+		T3DVec3 direction = {{0, 0, 0}};
+
+		t3d_vec3_diff(&direction, &target, &myPos);
+		t3d_vec3_norm(&direction);
+
+
+		fish->actor.pos[1] += direction.y * FISH_SPEED * delta;
+		fish->actor.pos[2] += direction.z * FISH_SPEED * delta;
+
+
+		if(t3d_vec3_distance(&target, &myPos) < 1.f) {
+			//? MERGE THE FISHHHH
+			fish->mergeNow = true;
+			all_fish[fish->smoochTarget].mergeNow = true;
+			// fish->isDead = true;
+			// all_fish[fish->smoochTarget].isDead = true;
+
+			//fish_append()
+		}
+
 	}
 
 	
