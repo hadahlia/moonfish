@@ -915,8 +915,8 @@ int main() {
 
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 200*2, "Triangles: %d", totalTris);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 210, "Update   : %.2fms", timeUpdate);
-		rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 220, "FPS      : %.2f", display_get_fps());
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 210, "Update   : %.2fms", timeUpdate);
+		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200, 220, "FPS      : %.2f", display_get_fps());
 
 		//rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, 200*2, 16*2, "State    : %s", state_strs[gstate]);
 
